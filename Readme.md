@@ -4,3 +4,4 @@ In the distant land，memetale, the princess has been captured by an evil dragon
 Gameplay: RPG game
 In this mystery adventure game, players gradually uncover the truth of the world by talking to people, engaging in conversations, and solving puzzles and mini-games. The game features multiple endings, including one true ending and two hidden endings.
 "When you have to make a choice, don't let yourself regret it (there are still save points)."
+![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/5a40e06b-234c-4ddd-9f3f-7a05cb231185.png)
