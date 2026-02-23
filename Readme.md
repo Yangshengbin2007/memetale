@@ -5,6 +5,7 @@ Gameplay: RPG game
 The gameplay involves exploring different caves based on the hints provided (there are save points), and the choices you make in these caves determine your ending (there may be bad endings).
 
 In this mystery adventure game, players gradually uncover the truth of the world by talking to people, engaging in conversations, and solving puzzles and mini-games. The game features multiple endings, including one true ending and two hidden endings.
+
 "When you have to make a choice, don't let yourself regret it."
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/5a40e06b-234c-4ddd-9f3f-7a05cb231185.png)
 #game cg
@@ -12,3 +13,26 @@ In this mystery adventure game, players gradually uncover the truth of the world
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/choose%20your%20way.jpg)
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Two/seeashark.jpg)
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Three/goodendcg.jpg)
+![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Four/newimage.jpg)
+
+## Gameplay Overview
+
+- **Genre**: Story-driven RPG with mystery and puzzle elements.
+- **Core Loop**:
+  - Explore different areas and caves based on hints.
+  - Talk to NPCs, collect information, and unlock new paths.
+  - Solve puzzles and play mini-games to progress the story.
+  - Make impactful choices that branch the storyline.
+- **Progression**:
+  - Multiple chapters/areas with save points.
+  - Each key choice affects your relationship with the world and leads to different routes.
+- **Endings**:
+  - 1 true ending that reveals the full truth of memetale.
+  - 2 hidden endings for players who explore deeply and make specific choices.
+  - Multiple bad endings if you ignore warnings or make reckless decisions.
+- **Theme**:
+  - "When you have to make a choice, don't let yourself regret it."
+
+## Story Outline (separate document)
+
+A detailed story outline for **memetale rpg** — including chapter structure, key choices, endings, and meme references — will be maintained in a dedicated story document (e.g. `story-outline.md`) to keep this README focused on the high-level overview.
