@@ -13,7 +13,7 @@ In this mystery adventure game, players gradually uncover the truth of the world
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/choose%20your%20way.jpg)
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Two/seeashark.jpg)
 ![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Three/goodendcg.jpg)
-![running app]([https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Four/newimage.jpg](https://github.com/Yangshengbin2007/memetale/blob/main/image/%E7%94%9F%E6%88%90%E5%90%8D%E5%AD%97%E5%8F%ABmemetale%E7%9A%84rpg%E6%B8%B8%E6%88%8F%E5%BC%80%E5%A7%8B%E9%A1%B5%E9%9D%A2%EF%BC%8C%E8%A6%81%E6%B1%82%E5%85%A8%E8%8B%B1%E6%96%87%EF%BC%8C%E8%83%8C%E6%99%AF%E6%9C%89%E5%B7%A8%E9%BE%99%EF%BC%8C%E7%8E%8B%E5%AD%90%EF%BC%8C%E5%85%AC%E4%B8%BB%E5%87%BA%E7%8E%B0%EF%BC%8C%E5%8C%85%E5%90%AB%E6%B8%B8%E6%88%8F%E5%BC%80%E5%A7%8B%EF%BC%8C%E8%AE%BE%E7%BD%AE.jpg))
+![running app](https://github.com/Yangshengbin2007/memetale/blob/main/image/start.jpg)
 
 ## Gameplay Overview
 
