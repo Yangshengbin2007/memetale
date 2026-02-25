@@ -9,6 +9,7 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.SwingUtilities;
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
@@ -298,26 +299,30 @@ public class StartScene extends JPanel implements Scene {
             center.add(slider, BorderLayout.CENTER);
             card.add(center, BorderLayout.CENTER);
 
+            // btns panel: replace Save/Load/Close with Apply (settings only) and Close
             JPanel btns = new JPanel();
             btns.setOpaque(false);
-            JButton save = new JButton("Save");
+            JButton apply = new JButton("Apply");
             JButton close = new JButton("Close");
             // styled buttons
             Color btnBg = new Color(30, 144, 255); // DodgerBlue-like
-            save.setBackground(btnBg);
-            save.setForeground(Color.WHITE);
+            apply.setBackground(btnBg);
+            apply.setForeground(Color.WHITE);
             close.setBackground(new Color(80, 80, 80));
             close.setForeground(Color.WHITE);
-            save.setFocusPainted(false);
+            apply.setFocusPainted(false);
             close.setFocusPainted(false);
 
-            save.addActionListener(ev -> {
+            // Apply action: apply settings (e.g. volume) but DO NOT save game state here
+            apply.addActionListener(ev -> {
                 int vol = slider.getValue();
-                System.out.println("Saved volume: " + vol);
+                System.out.println("Applied volume: " + vol);
 
+                JOptionPane.showMessageDialog(this, "Settings applied (temporary)");
             });
+
             close.addActionListener(ev -> dialog.dispose());
-            btns.add(save);
+            btns.add(apply);
             btns.add(close);
             card.add(btns, BorderLayout.SOUTH);
 
