@@ -1,5 +1,8 @@
 package main.java.game;
 
+import java.util.Deque;
+import java.util.ArrayDeque;
+
 public class SceneManager {
     // 计划中将添加：
     // - 当前场景引用，例如：private Scene currentScene;
@@ -31,4 +34,27 @@ public class SceneManager {
     //     // filepath: /.../src/main/java/game/core/SceneManager.java
     // - 在 /src/main/java/game 下手动创建上述子文件夹（core, scenes, input, assets, model, ui, util）
     // - 新建/迁移对应类到各自包下，并同步修改 package 声明
+
+    private Scene currentScene;
+    private Deque<Scene> sceneStack = new ArrayDeque<>();
+
+    public void setScene(Scene scene) {
+        if (currentScene != null) currentScene.onExit();
+        currentScene = scene;
+        if (currentScene != null) currentScene.onEnter();
+    }
+
+    public Scene getCurrentScene() {
+        return currentScene;
+    }
+
+    public void pushScene(Scene scene) {
+        if (currentScene != null) sceneStack.push(currentScene);
+        setScene(scene);
+    }
+
+    public void popScene() {
+        Scene s = sceneStack.isEmpty() ? null : sceneStack.pop();
+        setScene(s);
+    }
 }
