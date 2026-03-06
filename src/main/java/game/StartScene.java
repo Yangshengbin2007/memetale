@@ -1169,7 +1169,7 @@ public class StartScene extends JPanel implements Scene {
      */
     private void playVolumeTestDing() {
         try {
-            Clip clip = loadSoundClip(DING_SOUND_NAME);
+            loadSoundClip(DING_SOUND_NAME);
             if (clip == null) {
                 System.err.println("ding.wav not found for volume test.");
                 return;
