@@ -1,4 +1,4 @@
-package main.java.game;
+package game;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -8,7 +8,7 @@ public class StoryState implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // simple flag storage; can be expanded
-    private Map<String, Boolean> flags = new HashMap<>();
+    private final Map<String, Boolean> flags = new HashMap<>();
     private String currentScene;
 
     public StoryState() {

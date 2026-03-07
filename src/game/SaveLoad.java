@@ -1,4 +1,4 @@
-package main.java.game;
+package game;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,8 +27,8 @@ public final class SaveLoad {
         try (FileInputStream fis = new FileInputStream(f);
                 ObjectInputStream ois = new ObjectInputStream(fis)) {
             Object o = ois.readObject();
-            if (o instanceof StoryState)
-                return (StoryState) o;
+            if (o instanceof StoryState s)
+                return s;
             return null;
         }
     }

@@ -1,4 +1,4 @@
-package main.java.game;
+package game;
 
 // Explicit imports for Swing and AWT (required for desktop Java SE projects)
 import javax.swing.BorderFactory;
@@ -15,6 +15,9 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import java.io.IOException;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
@@ -31,8 +34,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.net.URL;
 import java.io.File;
 import java.awt.GridLayout;
@@ -46,12 +47,10 @@ public class StartScene extends JPanel implements Scene {
     // images
     private Image jerryImg;
     private Image startImg;
-    private Image gameCgImg;
 
     // alpha values
     private float alphaJerry = 0f;
     private float alphaStart = 0f;
-    private float alphaCg = 0f;
 
     private javax.swing.Timer timer;
 
@@ -61,6 +60,7 @@ public class StartScene extends JPanel implements Scene {
     private final String JERRY_SOUND_NAME = "beginsound.wav"; // 放在 sound/ 目录下
     // volume test ding sound
     private final String DING_SOUND_NAME = "ding.wav"; // 放在 sound/ 目录下
+    private final String CLICK_SOUND_NAME = "click.wav"; // 开始游戏等按钮点击音效，无则用 ding.wav
 
     // 背景 BGM（开始页面的循环音乐）
     private Clip bgmClip;
@@ -69,8 +69,16 @@ public class StartScene extends JPanel implements Scene {
     private final int BGM_MAX_PLAY_MS = 8000;
     private long bgmStartTime = -1L;
 
-    // 全局音量（0.0f ~ 1.0f），影响所有声音
-    private float masterVolume = 1.0f;
+    // 全局音量（0.0f ~ 1.0f），主菜单与游戏内设置共用
+    private static float masterVolumeStatic = 1.0f;
+
+    public static float getMasterVolume() {
+        return masterVolumeStatic;
+    }
+
+    public static void setMasterVolume(float v) {
+        masterVolumeStatic = Math.max(0f, Math.min(1f, v));
+    }
 
     // 主界面按钮交互状态
     private boolean hoverContinue = false;
@@ -81,33 +89,19 @@ public class StartScene extends JPanel implements Scene {
     private boolean pressedSetting = false;
     private boolean pressedStartGames = false;
     private boolean pressedQuit = false;
-    private Rectangle continueBounds = new Rectangle();
-    private Rectangle settingBounds = new Rectangle();
-    private Rectangle startGamesBounds = new Rectangle();
-    private Rectangle quitBounds = new Rectangle();
+    private final Rectangle continueBounds = new Rectangle();
+    private final Rectangle settingBounds = new Rectangle();
+    private final Rectangle startGamesBounds = new Rectangle();
+    private final Rectangle quitBounds = new Rectangle();
 
-    // 暂停菜单（ESC）相关
-    private boolean pauseMenuVisible = false;
-    private boolean hoverPauseSave = false;
-    private boolean hoverPauseLoad = false;
-    private boolean hoverPauseSettings = false;
-    private boolean hoverPauseHistory = false;
-    private boolean hoverPauseQuit = false;
-    private boolean pressedPauseSave = false;
-    private boolean pressedPauseLoad = false;
-    private boolean pressedPauseSettings = false;
-    private boolean pressedPauseHistory = false;
-    private boolean pressedPauseQuit = false;
-    private Rectangle pauseSaveBounds = new Rectangle();
-    private Rectangle pauseLoadBounds = new Rectangle();
-    private Rectangle pauseSettingsBounds = new Rectangle();
-    private Rectangle pauseHistoryBounds = new Rectangle();
-    private Rectangle pauseQuitBounds = new Rectangle();
+    /** 点击「开始游戏」时调用，切换到第一章等游戏场景；由 Main 注入 */
+    private Runnable onStartGame;
 
     // 读档淡入淡出效果
     private boolean loadFadeActive = false;
     private long loadFadeStartTime = 0L;
     private final int LOAD_FADE_TOTAL_MS = 800;
+    private static final int START_GAME_FADEOUT_MS = 450; // 开始游戏淡出时长
     private float loadFadeAlpha = 0f;
 
     // settings slider
@@ -119,9 +113,7 @@ public class StartScene extends JPanel implements Scene {
         JERRY_FADE_OUT,
         START_FADE_IN,
         DONE,
-        START_TRANSITION_TO_CG,
-        CG_FADE_IN,
-        CG_DISPLAY
+        START_GAME_FADEOUT  // 点击开始游戏后淡出主界面，再切场景
     }
 
     private State state = State.JERRY_FADE_IN;
@@ -142,8 +134,17 @@ public class StartScene extends JPanel implements Scene {
         // load start background raw; we'll scale-to-cover in paintComponent
         startImg = loadImageCandidatesRaw("start.jpg");
         // we no longer use separate images for the buttons; they are drawn procedurally
-        // preload game cg (optional) but we can load upon transition
-        gameCgImg = null;
+    }
+
+    /** 设置点击「开始游戏」后的回调（由 Main 调用） */
+    public void setOnStartGame(Runnable r) {
+        onStartGame = r;
+    }
+
+    /** 下次 onEnter 时直接显示主菜单（不播 Jerry 动画），用于从游戏内 Quit 回主页面 */
+    private boolean skipJerryNextEnter = false;
+    public void setSkipJerryNextEnter(boolean skip) {
+        skipJerryNextEnter = skip;
     }
 
     // 使用 ImageIcon 来获取图片尺寸并做缩放，避免 Image.getWidth(this) 在未显示时返回 -1
@@ -257,128 +258,66 @@ public class StartScene extends JPanel implements Scene {
             @Override
             public void mouseMoved(MouseEvent e) {
                 Point p = e.getPoint();
-                if (pauseMenuVisible) {
-                    boolean oldSave = hoverPauseSave;
-                    boolean oldLoad = hoverPauseLoad;
-                    boolean oldSet = hoverPauseSettings;
-                    boolean oldHist = hoverPauseHistory;
-                    boolean oldQuit = hoverPauseQuit;
-
-                    hoverPauseSave = pauseSaveBounds.contains(p);
-                    hoverPauseLoad = pauseLoadBounds.contains(p);
-                    hoverPauseSettings = pauseSettingsBounds.contains(p);
-                    hoverPauseHistory = pauseHistoryBounds.contains(p);
-                    hoverPauseQuit = pauseQuitBounds.contains(p);
-
-                    if (oldSave != hoverPauseSave || oldLoad != hoverPauseLoad || oldSet != hoverPauseSettings
-                            || oldHist != hoverPauseHistory || oldQuit != hoverPauseQuit) {
-                        repaint();
-                    }
-                } else {
-                    boolean oldHoverContinue = hoverContinue;
-                    boolean oldHoverSetting = hoverSetting;
-                    boolean oldHoverStart = hoverStartGames;
-                    boolean oldHoverQuit = hoverQuit;
-                    hoverContinue = continueBounds.contains(p);
-                    hoverSetting = settingBounds.contains(p);
-                    hoverStartGames = startGamesBounds.contains(p);
-                    hoverQuit = quitBounds.contains(p);
-                    if (hoverContinue != oldHoverContinue || hoverSetting != oldHoverSetting || hoverStartGames != oldHoverStart
-                            || hoverQuit != oldHoverQuit)
-                        repaint();
-                }
+                boolean oldHoverContinue = hoverContinue;
+                boolean oldHoverSetting = hoverSetting;
+                boolean oldHoverStart = hoverStartGames;
+                boolean oldHoverQuit = hoverQuit;
+                hoverContinue = continueBounds.contains(p);
+                hoverSetting = settingBounds.contains(p);
+                hoverStartGames = startGamesBounds.contains(p);
+                hoverQuit = quitBounds.contains(p);
+                if (hoverContinue != oldHoverContinue || hoverSetting != oldHoverSetting || hoverStartGames != oldHoverStart
+                        || hoverQuit != oldHoverQuit)
+                    repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
                 Point p = e.getPoint();
-                if (pauseMenuVisible) {
-                    if (pauseSaveBounds.contains(p)) {
-                        pressedPauseSave = true;
-                    } else if (pauseLoadBounds.contains(p)) {
-                        pressedPauseLoad = true;
-                    } else if (pauseSettingsBounds.contains(p)) {
-                        pressedPauseSettings = true;
-                    } else if (pauseHistoryBounds.contains(p)) {
-                        pressedPauseHistory = true;
-                    } else if (pauseQuitBounds.contains(p)) {
-                        pressedPauseQuit = true;
-                    }
+                if (continueBounds.contains(p)) {
+                    pressedContinue = true;
                     repaint();
-                } else {
-                    if (continueBounds.contains(p)) {
-                        pressedContinue = true;
-                        repaint();
-                    } else if (settingBounds.contains(p)) {
-                        pressedSetting = true;
-                        repaint();
-                    } else if (startGamesBounds.contains(p)) {
-                        pressedStartGames = true;
-                        repaint();
-                    } else if (quitBounds.contains(p)) {
-                        pressedQuit = true;
-                        repaint();
-                    }
+                } else if (settingBounds.contains(p)) {
+                    pressedSetting = true;
+                    repaint();
+                } else if (startGamesBounds.contains(p)) {
+                    pressedStartGames = true;
+                    repaint();
+                } else if (quitBounds.contains(p)) {
+                    pressedQuit = true;
+                    repaint();
                 }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
                 Point p = e.getPoint();
-                if (pauseMenuVisible) {
-                    if (pressedPauseSave && pauseSaveBounds.contains(p)) {
-                        pressedPauseSave = false;
-                        handlePauseSaveClicked();
-                    } else if (pressedPauseLoad && pauseLoadBounds.contains(p)) {
-                        pressedPauseLoad = false;
-                        handlePauseLoadClicked();
-                    } else if (pressedPauseSettings && pauseSettingsBounds.contains(p)) {
-                        pressedPauseSettings = false;
-                        handlePauseSettingsClicked();
-                    } else if (pressedPauseHistory && pauseHistoryBounds.contains(p)) {
-                        pressedPauseHistory = false;
-                        handlePauseHistoryClicked();
-                    } else if (pressedPauseQuit && pauseQuitBounds.contains(p)) {
-                        pressedPauseQuit = false;
-                        handlePauseQuitClicked();
-                    } else {
-                        pressedPauseSave = pressedPauseLoad = pressedPauseSettings = pressedPauseHistory = pressedPauseQuit = false;
-                    }
-                    repaint();
+                if (pressedContinue && continueBounds.contains(p)) {
+                    pressedContinue = false;
+                    onContinueClicked();
+                } else if (pressedSetting && settingBounds.contains(p)) {
+                    pressedSetting = false;
+                    onSettingClicked();
+                } else if (pressedStartGames && startGamesBounds.contains(p)) {
+                    pressedStartGames = false;
+                    onStartGamesClicked();
+                } else if (pressedQuit && quitBounds.contains(p)) {
+                    pressedQuit = false;
+                    onQuitClicked();
                 } else {
-                    if (pressedContinue && continueBounds.contains(p)) {
-                        pressedContinue = false;
-                        onContinueClicked();
-                    } else if (pressedSetting && settingBounds.contains(p)) {
-                        pressedSetting = false;
-                        onSettingClicked();
-                    } else if (pressedStartGames && startGamesBounds.contains(p)) {
-                        pressedStartGames = false;
-                        onStartGamesClicked();
-                    } else if (pressedQuit && quitBounds.contains(p)) {
-                        pressedQuit = false;
-                        onQuitClicked();
-                    } else {
-                        pressedContinue = false;
-                        pressedSetting = false;
-                        pressedStartGames = false;
-                        pressedQuit = false;
-                    }
-                    repaint();
+                    pressedContinue = false;
+                    pressedSetting = false;
+                    pressedStartGames = false;
+                    pressedQuit = false;
                 }
+                repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (pauseMenuVisible) {
-                    hoverPauseSave = hoverPauseLoad = hoverPauseSettings = hoverPauseHistory = hoverPauseQuit = false;
-                    pressedPauseSave = pressedPauseLoad = pressedPauseSettings = pressedPauseHistory = pressedPauseQuit = false;
-                    repaint();
-                } else {
-                    hoverContinue = hoverSetting = hoverStartGames = hoverQuit = false;
-                    pressedContinue = pressedSetting = pressedStartGames = pressedQuit = false;
-                    repaint();
-                }
+                hoverContinue = hoverSetting = hoverStartGames = hoverQuit = false;
+                pressedContinue = pressedSetting = pressedStartGames = pressedQuit = false;
+                repaint();
             }
         };
         addMouseListener(ma);
@@ -428,7 +367,7 @@ public class StartScene extends JPanel implements Scene {
             JLabel lbl = new JLabel("Sound Volume");
             lbl.setForeground(new Color(250, 250, 240));
 
-            slider = new JSlider(0, 100, (int) (masterVolume * 100));
+            slider = new JSlider(0, 100, (int) (masterVolumeStatic * 100));
             slider.setPaintTicks(true);
             // 提升对比度，让刻度和数字更清晰
             slider.setForeground(new Color(240, 240, 240));
@@ -436,44 +375,61 @@ public class StartScene extends JPanel implements Scene {
             slider.setMajorTickSpacing(25);
             slider.setMinorTickSpacing(5);
             slider.setPaintLabels(true);
-
-            // 松开滑块时应用音量并播放一次 ding.wav 作为预览
-            slider.addChangeListener((ChangeListener) e -> {
-                if (!slider.getValueIsAdjusting()) {
-                    int vol = slider.getValue();
-                    masterVolume = Math.max(0f, Math.min(1f, vol / 100f));
-                    updateAllVolumes();
-                    playVolumeTestDing();
+            // 点击轨道时拇指跳到该位置（光标点到哪音量就预览到哪，不改变主音量）
+            slider.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mousePressed(java.awt.event.MouseEvent e) {
+                    if (!slider.isEnabled()) return;
+                    int w = slider.getWidth();
+                    int x = e.getX();
+                    int min = slider.getMinimum();
+                    int max = slider.getMaximum();
+                    int value = min + (int) Math.round((max - min) * (double) x / w);
+                    value = Math.max(min, Math.min(max, value));
+                    slider.setValue(value);
                 }
+            });
+
+            // 设置内仅 ding 随滑块变；主页面音乐不变，只有点 Apply 才写入主音量
+            slider.addChangeListener((ChangeListener) e -> {
+                if (!slider.getValueIsAdjusting())
+                    playVolumeTestDingAt(slider.getValue() / 100f);
             });
 
             center.add(lbl, BorderLayout.NORTH);
             center.add(slider, BorderLayout.CENTER);
             card.add(center, BorderLayout.CENTER);
 
-            // btns panel: replace Save/Load/Close with Apply (settings only) and Close
+            // btns panel: Apply (confirm volume), Save (open save slots), Close
             JPanel btns = new JPanel();
             btns.setOpaque(false);
             JButton apply = new JButton("Apply");
+            JButton saveGame = new JButton("Save");
             JButton close = new JButton("Close");
             // styled buttons
             Color btnBg = new Color(30, 144, 255); // DodgerBlue-like
             apply.setBackground(btnBg);
-            apply.setForeground(Color.BLACK); // 改为黑字，提高清晰度
+            apply.setForeground(Color.BLACK);
+            saveGame.setBackground(btnBg);
+            saveGame.setForeground(Color.BLACK);
             close.setBackground(new Color(200, 200, 200));
-            close.setForeground(Color.BLACK); // 底部两个按钮的文字都使用黑色
+            close.setForeground(Color.BLACK);
             apply.setFocusPainted(false);
+            saveGame.setFocusPainted(false);
             close.setFocusPainted(false);
 
-            // Apply action: 应用全局音量设置
             apply.addActionListener(ev -> {
-                // 音量已经在松开滑块时实时应用，这里只关闭窗口
-                System.out.println("Master volume confirmed: " + masterVolume);
+                masterVolumeStatic = Math.max(0f, Math.min(1f, slider.getValue() / 100f));
+                updateAllVolumes();
                 dialog.dispose();
             });
-
+            saveGame.addActionListener(ev -> {
+                dialog.dispose();
+                showSaveSlotDialog();
+            });
             close.addActionListener(ev -> dialog.dispose());
             btns.add(apply);
+            btns.add(saveGame);
             btns.add(close);
             card.add(btns, BorderLayout.SOUTH);
 
@@ -486,23 +442,14 @@ public class StartScene extends JPanel implements Scene {
     }
 
     private void onStartGamesClicked() {
-        // start transition: fade out current start image then fade in gameCgImg
         if (state == State.START_FADE_IN || state == State.DONE) {
-            state = State.START_TRANSITION_TO_CG;
-            stateStart = System.currentTimeMillis();
-            // 点击开始游戏立即停止 BGM
             stopBackgroundMusic();
-            // 确保在 DONE 状态下也能继续驱动淡入淡出动画
-            if (timer != null && !timer.isRunning()) {
+            playClickSound();
+            state = State.START_GAME_FADEOUT;
+            stateStart = System.currentTimeMillis();
+            alphaStart = 1f;
+            if (timer != null && !timer.isRunning())
                 timer.start();
-            }
-            // ensure gameCg loaded
-            if (gameCgImg == null) {
-                gameCgImg = loadImageCandidatesRaw("gamecg1.jpg");
-                if (gameCgImg == null) {
-                    System.err.println("gamecg1.jpg not found; transition will still fade out start.");
-                }
-            }
         }
     }
 
@@ -512,8 +459,16 @@ public class StartScene extends JPanel implements Scene {
     }
 
     private void onQuitClicked() {
-        // 主界面上的退出按钮：直接退出程序
-        System.exit(0);
+        int choice = JOptionPane.showOptionDialog(this,
+                "Are you sure you want to quit?",
+                "Quit",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                new String[] { "Quit", "Cancel" },
+                "Cancel");
+        if (choice == 0) // Quit
+            System.exit(0);
     }
 
     private void initTimer() {
@@ -521,63 +476,46 @@ public class StartScene extends JPanel implements Scene {
         timer = new javax.swing.Timer(TIMER_DELAY, e -> {
             long elapsed = System.currentTimeMillis() - stateStart;
             switch (state) {
-                case JERRY_FADE_IN:
+                case JERRY_FADE_IN -> {
                     alphaJerry = Math.min(1f, elapsed / (float) FADE_MS);
                     if (alphaJerry >= 1f) {
                         state = State.JERRY_HOLD;
                         stateStart = System.currentTimeMillis();
                     }
-                    break;
-                case JERRY_HOLD:
+                }
+                case JERRY_HOLD -> {
                     alphaJerry = 1f;
                     if (elapsed >= HOLD_MS) {
                         state = State.JERRY_FADE_OUT;
                         stateStart = System.currentTimeMillis();
                     }
-                    break;
-                case JERRY_FADE_OUT:
+                }
+                case JERRY_FADE_OUT -> {
                     alphaJerry = Math.max(0f, 1f - elapsed / (float) FADE_MS);
                     if (alphaJerry <= 0f) {
-                        // Jerry 图标完全消失时，立即停止音效
                         stopJerrySound();
                         state = State.START_FADE_IN;
                         stateStart = System.currentTimeMillis();
                         alphaStart = 0f;
                     }
-                    break;
-                case START_FADE_IN:
+                }
+                case START_FADE_IN -> {
                     alphaStart = Math.min(1f, elapsed / (float) FADE_MS);
                     if (alphaStart >= 1f) {
                         state = State.DONE;
                         stateStart = System.currentTimeMillis();
-                        // 主页面完全显示后再开始播放 BGM
                         startBackgroundMusicLoop();
-                        timer.stop(); // stop idle animation; we'll restart on enter
+                        timer.stop();
                     }
-                    break;
-                case START_TRANSITION_TO_CG:
-                    // fade out start image
-                    alphaStart = Math.max(0f, 1f - elapsed / (float) FADE_MS);
-                    if (alphaStart <= 0f) {
-                        // begin cg fade-in
-                        state = State.CG_FADE_IN;
-                        stateStart = System.currentTimeMillis();
-                        alphaCg = 0f;
+                }
+                case DONE -> { }
+                case START_GAME_FADEOUT -> {
+                    alphaStart = Math.max(0f, 1f - elapsed / (float) START_GAME_FADEOUT_MS);
+                    if (alphaStart <= 0f && onStartGame != null) {
+                        onStartGame.run();
                     }
-                    break;
-                case CG_FADE_IN:
-                    alphaCg = Math.min(1f, elapsed / (float) FADE_MS);
-                    if (alphaCg >= 1f) {
-                        state = State.CG_DISPLAY;
-                        stateStart = System.currentTimeMillis();
-                    }
-                    break;
-                case CG_DISPLAY:
-                    // remain showing game cg
-                    break;
-                case DONE:
-                default:
-                    break;
+                }
+                default -> { }
             }
             // 控制 BGM 的最大播放时长（例如只播放前 BGM_MAX_PLAY_MS 毫秒）
             if (bgmClip != null && bgmStartTime > 0) {
@@ -622,7 +560,7 @@ public class StartScene extends JPanel implements Scene {
         }
 
         // draw start background filling the whole panel (cover) when visible
-        if ((state == State.START_FADE_IN || state == State.DONE || state == State.START_TRANSITION_TO_CG)
+        if ((state == State.START_FADE_IN || state == State.DONE || state == State.START_GAME_FADEOUT)
                 && startImg != null) {
             int iw = startImg.getWidth(this);
             int ih = startImg.getHeight(this);
@@ -668,26 +606,6 @@ public class StartScene extends JPanel implements Scene {
 
                 // hover/pressed overlay handled inside paintStyledButton
             }
-        }
-
-        // draw game cg if transitioning/shown
-        if ((state == State.CG_FADE_IN || state == State.CG_DISPLAY) && gameCgImg != null) {
-            int iw = gameCgImg.getWidth(this);
-            int ih = gameCgImg.getHeight(this);
-            if (iw > 0 && ih > 0) {
-                double scale = Math.max((double) w / iw, (double) h / ih); // cover
-                int sw = (int) Math.ceil(iw * scale);
-                int sh = (int) Math.ceil(ih * scale);
-                int x = (w - sw) / 2;
-                int y = (h - sh) / 2;
-                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaCg));
-                g2.drawImage(gameCgImg, x, y, sw, sh, this);
-            }
-        }
-
-        // 暂停菜单（ESC）覆盖在最上层
-        if (pauseMenuVisible && (state == State.CG_FADE_IN || state == State.CG_DISPLAY)) {
-            paintPauseMenu(g2, w, h);
         }
 
         // 读档淡入淡出整体遮罩
@@ -747,68 +665,28 @@ public class StartScene extends JPanel implements Scene {
         g2.setFont(orig);
     }
 
-    // 绘制 ESC 暂停菜单
-    private void paintPauseMenu(Graphics2D g2, int w, int h) {
-        // 半透明黑色遮罩
-        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, w, h);
-
-        int panelW = (int) (w * 0.5);
-        int panelH = (int) (h * 0.55);
-        int px = (w - panelW) / 2;
-        int py = (h - panelH) / 2;
-
-        Graphics2D gPanel = (Graphics2D) g2.create();
-        // 卡片背景
-        gPanel.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-        gPanel.setColor(new Color(40, 40, 40, 230));
-        gPanel.fillRoundRect(px, py, panelW, panelH, 18, 18);
-        gPanel.setStroke(new BasicStroke(3f));
-        gPanel.setColor(new Color(200, 160, 60));
-        gPanel.drawRoundRect(px + 1, py + 1, panelW - 2, panelH - 2, 18, 18);
-
-        int btnW = (int) (panelW * 0.7);
-        int btnH = (int) (panelH * 0.12);
-        int spacing = (panelH - btnH * 5) / 6;
-        int centerX = w / 2;
-        int x = centerX - btnW / 2;
-        int y = py + spacing;
-
-        pauseSaveBounds.setBounds(x, y, btnW, btnH);
-        y += btnH + spacing;
-        pauseLoadBounds.setBounds(x, y, btnW, btnH);
-        y += btnH + spacing;
-        pauseSettingsBounds.setBounds(x, y, btnW, btnH);
-        y += btnH + spacing;
-        pauseHistoryBounds.setBounds(x, y, btnW, btnH);
-        y += btnH + spacing;
-        pauseQuitBounds.setBounds(x, y, btnW, btnH);
-
-        paintStyledButton(gPanel, pauseSaveBounds, "Save", hoverPauseSave, pressedPauseSave);
-        paintStyledButton(gPanel, pauseLoadBounds, "Load", hoverPauseLoad, pressedPauseLoad);
-        paintStyledButton(gPanel, pauseSettingsBounds, "Settings", hoverPauseSettings, pressedPauseSettings);
-        paintStyledButton(gPanel, pauseHistoryBounds, "History", hoverPauseHistory, pressedPauseHistory);
-        paintStyledButton(gPanel, pauseQuitBounds, "Quit to Title", hoverPauseQuit, pressedPauseQuit);
-
-        gPanel.dispose();
-    }
-
     @Override
     public void onEnter() {
-        // reset state and start animation
-        state = State.JERRY_FADE_IN;
-        stateStart = System.currentTimeMillis();
-        // 进入 Jerry 阶段时播放开场音效
-        playJerrySoundOnce();
-        alphaJerry = 0f;
-        alphaStart = 0f;
-        alphaCg = 0f;
-        pauseMenuVisible = false;
-        loadFadeActive = false;
-        if (timer != null && !timer.isRunning())
-            timer.start();
-        // 确保键盘事件可用（ESC）
+        if (skipJerryNextEnter) {
+            skipJerryNextEnter = false;
+            state = State.DONE;
+            stateStart = System.currentTimeMillis();
+            alphaJerry = 0f;
+            alphaStart = 1f;
+            loadFadeActive = false;
+            startBackgroundMusicLoop();
+            if (timer != null && timer.isRunning())
+                timer.stop();
+        } else {
+            state = State.JERRY_FADE_IN;
+            stateStart = System.currentTimeMillis();
+            playJerrySoundOnce();
+            alphaJerry = 0f;
+            alphaStart = 0f;
+            loadFadeActive = false;
+            if (timer != null && !timer.isRunning())
+                timer.start();
+        }
         requestFocusInWindow();
     }
 
@@ -828,26 +706,6 @@ public class StartScene extends JPanel implements Scene {
 
     private void initKey() {
         setFocusable(true);
-        addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    onEscapePressed();
-                }
-            }
-        });
-    }
-
-    private void onEscapePressed() {
-        // 只在真正“游戏中”（CG 阶段）允许弹出暂停菜单
-        if (state == State.CG_FADE_IN || state == State.CG_DISPLAY) {
-            pauseMenuVisible = !pauseMenuVisible;
-            // 重置暂停按钮状态
-            hoverPauseSave = hoverPauseLoad = hoverPauseSettings = hoverPauseHistory = hoverPauseQuit = false;
-            pressedPauseSave = pressedPauseLoad = pressedPauseSettings = pressedPauseHistory = pressedPauseQuit =
-                    false;
-            repaint();
-        }
     }
 
     /**
@@ -867,7 +725,6 @@ public class StartScene extends JPanel implements Scene {
             }
         } catch (Exception ex) {
             System.err.println("Error playing jerry sound: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 
@@ -892,10 +749,10 @@ public class StartScene extends JPanel implements Scene {
      * 尝试从 classpath (/sound/) 或项目目录 sound/ 中加载指定文件名的音效。
      */
     private Clip loadSoundClip(String fileName) {
-        AudioInputStream ais = null;
         try {
             // 1. 先尝试从 classpath 中读取（例如打包到 JAR 的 /sound/ 目录）
             URL url = getClass().getResource("/sound/" + fileName);
+            AudioInputStream ais;
             if (url != null) {
                 ais = AudioSystem.getAudioInputStream(url);
             } else {
@@ -910,9 +767,8 @@ public class StartScene extends JPanel implements Scene {
             Clip clip = AudioSystem.getClip();
             clip.open(ais);
             return clip;
-        } catch (Exception ex) {
+        } catch (IOException | UnsupportedAudioFileException | LineUnavailableException ex) {
             System.err.println("Failed to load sound: " + fileName + " - " + ex.getMessage());
-            ex.printStackTrace();
             return null;
         } finally {
             // 注意：Clip 打开后会持有数据，这里不能提前关闭 ais；交给 Clip 管理
@@ -936,7 +792,6 @@ public class StartScene extends JPanel implements Scene {
             }
         } catch (Exception ex) {
             System.err.println("Error playing bgm sound: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 
@@ -962,10 +817,10 @@ public class StartScene extends JPanel implements Scene {
      * 尝试从 classpath (/music/) 或项目目录 music/ 中加载开始页面 BGM。
      */
     private Clip loadMusicClip(String fileName) {
-        AudioInputStream ais = null;
         try {
             // 1. 先尝试从 classpath 中读取（例如打包到 JAR 的 /music/ 目录）
             URL url = getClass().getResource("/music/" + fileName);
+            AudioInputStream ais;
             if (url != null) {
                 ais = AudioSystem.getAudioInputStream(url);
             } else {
@@ -980,9 +835,8 @@ public class StartScene extends JPanel implements Scene {
             Clip clip = AudioSystem.getClip();
             clip.open(ais);
             return clip;
-        } catch (Exception ex) {
+        } catch (IOException | UnsupportedAudioFileException | LineUnavailableException ex) {
             System.err.println("Failed to load music: " + fileName + " - " + ex.getMessage());
-            ex.printStackTrace();
             return null;
         } finally {
             // 注意：Clip 打开后会持有数据，这里不能提前关闭 ais；交给 Clip 管理
@@ -990,25 +844,32 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 将当前 masterVolume 应用到指定 Clip。
+     * 将指定音量应用到 Clip（不改变 masterVolumeStatic），用于设置里预览 ding。
      */
-    private void applyVolumeToClip(Clip clip) {
+    private void applyVolumeToClip(Clip clip, float volume) {
         if (clip == null)
             return;
         try {
             if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
                 FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                float volume = Math.max(0f, Math.min(1f, masterVolume));
-                if (volume == 0f) {
+                float v = Math.max(0f, Math.min(1f, volume));
+                if (v == 0f) {
                     gain.setValue(gain.getMinimum());
                 } else {
-                    float dB = (float) (20.0 * Math.log10(volume));
+                    float dB = (float) (20.0 * Math.log10(v));
                     dB = Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), dB));
                     gain.setValue(dB);
                 }
             }
         } catch (Exception ignore) {
         }
+    }
+
+    /**
+     * 将当前 masterVolume 应用到指定 Clip。
+     */
+    private void applyVolumeToClip(Clip clip) {
+        applyVolumeToClip(clip, masterVolumeStatic);
     }
 
     /**
@@ -1019,40 +880,49 @@ public class StartScene extends JPanel implements Scene {
         applyVolumeToClip(bgmClip);
     }
 
-    // ========= 暂停菜单：保存/读取/设置/历史/退出 =========
-
-    // 暂停菜单按钮行为（内部处理函数，从鼠标事件中调用）
-    private void handlePauseSaveClicked() {
-        showSaveSlotDialog();
+    /** 静态：将指定音量应用到 Clip，供 playVolumeTestDingAt 使用 */
+    private static void applyVolumeToClipStatic(Clip clip, float volume) {
+        if (clip == null) return;
+        try {
+            if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                float v = Math.max(0f, Math.min(1f, volume));
+                if (v == 0f) gain.setValue(gain.getMinimum());
+                else {
+                    float dB = (float) (20.0 * Math.log10(v));
+                    dB = Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), dB));
+                    gain.setValue(dB);
+                }
+            }
+        } catch (Exception ignore) { }
     }
 
-    private void handlePauseLoadClicked() {
-        showLoadSlotDialog();
-    }
-
-    private void handlePauseSettingsClicked() {
-        onSettingClicked();
-    }
-
-    private void handlePauseHistoryClicked() {
-        // 目前仅占位，后续可以加入对话复述功能
-        JOptionPane.showMessageDialog(this, "History feature will be implemented later.");
-    }
-
-    private void handlePauseQuitClicked() {
-        // 游戏内 Quit：返回主页面（start 背景和按钮），不要重新播放 Jerry 开场
-        pauseMenuVisible = false;
-        loadFadeActive = false;
-        // 直接切换到主菜单状态
-        state = State.START_FADE_IN;
-        stateStart = System.currentTimeMillis() - FADE_MS; // 让下一个 tick 立刻完成淡入并进入 DONE
-        alphaJerry = 0f;
-        alphaStart = 1f;
-        alphaCg = 0f;
-        stopJerrySound();
-        stopBackgroundMusic();
-        if (timer != null && !timer.isRunning()) {
-            timer.start();
+    /**
+     * 用指定音量播放一次 ding（不改变 masterVolume），供主菜单与游戏内设置预览用。
+     */
+    public static void playVolumeTestDingAt(float volume) {
+        try {
+            URL url = StartScene.class.getResource("/sound/ding.wav");
+            AudioInputStream ais = null;
+            if (url != null)
+                ais = AudioSystem.getAudioInputStream(url);
+            else {
+                File f = new File("sound/ding.wav");
+                if (f.exists())
+                    ais = AudioSystem.getAudioInputStream(f);
+            }
+            if (ais == null) return;
+            Clip clip = AudioSystem.getClip();
+            clip.open(ais);
+            applyVolumeToClipStatic(clip, volume);
+            Clip c = clip;
+            clip.addLineListener(event -> {
+                if (event.getType() == javax.sound.sampled.LineEvent.Type.STOP)
+                    c.close();
+            });
+            clip.start();
+        } catch (Exception ex) {
+            System.err.println("Failed to play ding: " + ex.getMessage());
         }
     }
 
@@ -1100,8 +970,8 @@ public class StartScene extends JPanel implements Scene {
                         options,
                         options[0]);
                 if (choice == 0) { // Load
-                    performLoad(slot);
                     dialog.dispose();
+                    performLoad(slot);
                 } else if (choice == 1) { // Delete
                     deleteSaveSlot(slot);
                 }
@@ -1123,7 +993,6 @@ public class StartScene extends JPanel implements Scene {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Save failed: " + ex.getMessage(), "Error",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
         }
     }
 
@@ -1137,13 +1006,14 @@ public class StartScene extends JPanel implements Scene {
                 return;
             }
             GameState.setState(loaded);
-            // 触发淡出->淡入效果
             loadFadeActive = true;
             loadFadeStartTime = System.currentTimeMillis();
+            // 主页面读档后切换到游戏场景，让玩家继续游戏
+            if (onStartGame != null)
+                onStartGame.run();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Load failed: " + ex.getMessage(), "Error",
                     JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
         }
     }
 
@@ -1169,23 +1039,38 @@ public class StartScene extends JPanel implements Scene {
      */
     private void playVolumeTestDing() {
         try {
-            loadSoundClip(DING_SOUND_NAME);
+            Clip clip = loadSoundClip(DING_SOUND_NAME);
             if (clip == null) {
                 System.err.println("ding.wav not found for volume test.");
                 return;
             }
             applyVolumeToClip(clip);
-            // 播放完自动关闭资源
+            Clip c = clip;
             clip.addLineListener(event -> {
                 if (event.getType() == javax.sound.sampled.LineEvent.Type.STOP) {
-                    clip.close();
+                    c.close();
                 }
             });
             clip.start();
         } catch (Exception ex) {
             System.err.println("Failed to play ding.wav: " + ex.getMessage());
-            ex.printStackTrace();
         }
     }
 
+    /** 播放按钮点击音效（开始游戏等），先试 click.wav，无则用 ding.wav */
+    private void playClickSound() {
+        Clip clip = loadSoundClip(CLICK_SOUND_NAME);
+        if (clip == null)
+            clip = loadSoundClip(DING_SOUND_NAME);
+        if (clip == null) return;
+        applyVolumeToClip(clip);
+        final Clip toClose = clip;
+        clip.addLineListener(event -> {
+            if (event.getType() == javax.sound.sampled.LineEvent.Type.STOP) {
+                toClose.close();
+            }
+        });
+        clip.start();
+    }
 }
+

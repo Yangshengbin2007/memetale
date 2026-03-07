@@ -1,4 +1,4 @@
-package main.java.game;
+package game;
 
 public final class GameState {
     private static StoryState state = new StoryState();

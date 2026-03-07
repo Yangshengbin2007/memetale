@@ -1,10 +1,10 @@
-package main.java.game;
+package game;
 
 import javax.swing.*;
 
-public class Game {
+public class Main {
 	private JFrame frame;
-	private SceneManager sceneManager = new SceneManager();
+	private SceneManager sceneManager;
 
 	public void start() {
 		SwingUtilities.invokeLater(() -> {
@@ -14,19 +14,20 @@ public class Game {
 			frame.setLocationRelativeTo(null);
 			frame.setResizable(false);
 
+			sceneManager = new SceneManager(frame);
 			StartScene startScene = new StartScene();
+			ChapterOneScene chapterOne = new ChapterOneScene(() -> {
+				startScene.setSkipJerryNextEnter(true);
+				sceneManager.setScene(startScene);
+			});
+			startScene.setOnStartGame(() -> sceneManager.setScene(chapterOne));
 
-			// 先设置内容面板并显示窗口，再激活场景（保证面板可见，图片度量可靠）
-			frame.setContentPane(startScene.getPanel());
-			frame.validate();
-			frame.setVisible(true);
-
-			// 在窗口可见后切换场景，SceneManager.setScene 会调用 startScene.onEnter()
 			sceneManager.setScene(startScene);
+			frame.setVisible(true);
 		});
 	}
 
 	public static void main(String[] args) {
-		new Game().start();
+		new Main().start();
 	}
 }
