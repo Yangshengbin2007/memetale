@@ -87,18 +87,26 @@ public class StartScene extends JPanel implements Scene {
     private boolean hoverContinue = false;
     private boolean hoverSetting = false;
     private boolean hoverStartGames = false;
+    private boolean hoverMiniGames = false;
     private boolean hoverQuit = false;
     private boolean pressedContinue = false;
     private boolean pressedSetting = false;
     private boolean pressedStartGames = false;
+    private boolean pressedMiniGames = false;
     private boolean pressedQuit = false;
     private final Rectangle continueBounds = new Rectangle();
     private final Rectangle settingBounds = new Rectangle();
     private final Rectangle startGamesBounds = new Rectangle();
+    private final Rectangle miniGamesBounds = new Rectangle();
     private final Rectangle quitBounds = new Rectangle();
 
     /** 点击「开始游戏」时调用，切换到第一章等游戏场景；由 Main 注入 */
     private Runnable onStartGame;
+    /** 点击「Mini Games」时调用，切换到小游戏合集场景；由 Main 注入 */
+    private Runnable onMiniGames;
+
+    /** 下次 onEnter 时直接显示主菜单（不播 Jerry 动画），用于从游戏内 Quit 回主页面 */
+    private boolean skipJerryNextEnter = false;
 
     // 读档淡入淡出效果
     private boolean loadFadeActive = false;
@@ -144,8 +152,11 @@ public class StartScene extends JPanel implements Scene {
         onStartGame = r;
     }
 
-    /** 下次 onEnter 时直接显示主菜单（不播 Jerry 动画），用于从游戏内 Quit 回主页面 */
-    private boolean skipJerryNextEnter = false;
+    /** 设置点击「Mini Games」后的回调（由 Main 调用） */
+    public void setOnMiniGames(Runnable r) {
+        onMiniGames = r;
+    }
+
     public void setSkipJerryNextEnter(boolean skip) {
         skipJerryNextEnter = skip;
     }
@@ -264,13 +275,15 @@ public class StartScene extends JPanel implements Scene {
                 boolean oldHoverContinue = hoverContinue;
                 boolean oldHoverSetting = hoverSetting;
                 boolean oldHoverStart = hoverStartGames;
+                boolean oldHoverMini = hoverMiniGames;
                 boolean oldHoverQuit = hoverQuit;
                 hoverContinue = continueBounds.contains(p);
                 hoverSetting = settingBounds.contains(p);
                 hoverStartGames = startGamesBounds.contains(p);
+                hoverMiniGames = miniGamesBounds.contains(p);
                 hoverQuit = quitBounds.contains(p);
                 if (hoverContinue != oldHoverContinue || hoverSetting != oldHoverSetting || hoverStartGames != oldHoverStart
-                        || hoverQuit != oldHoverQuit)
+                        || hoverMiniGames != oldHoverMini || hoverQuit != oldHoverQuit)
                     repaint();
             }
 
@@ -286,6 +299,9 @@ public class StartScene extends JPanel implements Scene {
                 } else if (startGamesBounds.contains(p)) {
                     pressedStartGames = true;
                     repaint();
+                } else if (miniGamesBounds.contains(p)) {
+                    pressedMiniGames = true;
+                    repaint();
                 } else if (quitBounds.contains(p)) {
                     pressedQuit = true;
                     repaint();
@@ -296,7 +312,7 @@ public class StartScene extends JPanel implements Scene {
             public void mouseReleased(MouseEvent e) {
                 Point p = e.getPoint();
                 if (state != State.DONE && state != State.START_FADE_IN) {
-                    pressedContinue = pressedSetting = pressedStartGames = pressedQuit = false;
+                    pressedContinue = pressedSetting = pressedStartGames = pressedMiniGames = pressedQuit = false;
                     repaint();
                     return;
                 }
@@ -309,6 +325,9 @@ public class StartScene extends JPanel implements Scene {
                 } else if (pressedStartGames && startGamesBounds.contains(p)) {
                     pressedStartGames = false;
                     onStartGamesClicked();
+                } else if (pressedMiniGames && miniGamesBounds.contains(p)) {
+                    pressedMiniGames = false;
+                    onMiniGamesClicked();
                 } else if (pressedQuit && quitBounds.contains(p)) {
                     pressedQuit = false;
                     onQuitClicked();
@@ -316,6 +335,7 @@ public class StartScene extends JPanel implements Scene {
                     pressedContinue = false;
                     pressedSetting = false;
                     pressedStartGames = false;
+                    pressedMiniGames = false;
                     pressedQuit = false;
                 }
                 repaint();
@@ -323,8 +343,8 @@ public class StartScene extends JPanel implements Scene {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                hoverContinue = hoverSetting = hoverStartGames = hoverQuit = false;
-                pressedContinue = pressedSetting = pressedStartGames = pressedQuit = false;
+                hoverContinue = hoverSetting = hoverStartGames = hoverMiniGames = hoverQuit = false;
+                pressedContinue = pressedSetting = pressedStartGames = pressedMiniGames = pressedQuit = false;
                 repaint();
             }
         };
@@ -469,6 +489,15 @@ public class StartScene extends JPanel implements Scene {
         showLoadSlotDialog();
     }
 
+    private void onMiniGamesClicked() {
+        if (state == State.START_FADE_IN || state == State.DONE) {
+            stopBackgroundMusic();
+            playClickSound();
+            if (onMiniGames != null)
+                onMiniGames.run();
+        }
+    }
+
     private void onQuitClicked() {
         int choice = JOptionPane.showOptionDialog(this,
                 "Are you sure you want to quit?",
@@ -584,30 +613,35 @@ public class StartScene extends JPanel implements Scene {
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alphaStart));
                 g2.drawImage(startImg, imgX, imgY, sw, sh, this);
 
-                // centered stacked button positions (Continue / Start Game / Settings / Quit)
-                int btnW = (int) (sw * 0.4); // 按钮宽度稍微收窄
-                int btnH = (int) (sh * 0.08); // 按钮高度也减小
-                int spacing = (int) (sh * 0.025); // 垂直间距
+                // centered stacked button positions (Continue / Start Game / Mini Games / Settings / Quit)
+                int btnW = (int) (sw * 0.4);
+                int btnH = (int) (sh * 0.08);
+                int spacing = (int) (sh * 0.025);
 
                 int centerX = imgX + sw / 2;
-                int firstBtnY = imgY + (int) (sh * 0.50);
+                int firstBtnY = imgY + (int) (sh * 0.48);
 
                 int continueBtnY = firstBtnY;
                 int startBtnY = continueBtnY + btnH + spacing;
-                int settingBtnY = startBtnY + btnH + spacing;
+                int miniGamesBtnY = startBtnY + btnH + spacing;
+                int settingBtnY = miniGamesBtnY + btnH + spacing;
                 int quitBtnY = settingBtnY + btnH + spacing;
 
                 int bx = centerX - btnW / 2;
-                continueBounds.setBounds(bx, continueBtnY, btnW, btnH); // Continue
-                startGamesBounds.setBounds(bx, startBtnY, btnW, btnH); // Start Game
-                settingBounds.setBounds(bx, settingBtnY, btnW, btnH); // Settings
-                quitBounds.setBounds(bx, quitBtnY, btnW, btnH); // Quit
+                continueBounds.setBounds(bx, continueBtnY, btnW, btnH);
+                startGamesBounds.setBounds(bx, startBtnY, btnW, btnH);
+                miniGamesBounds.setBounds(bx, miniGamesBtnY, btnW, btnH);
+                settingBounds.setBounds(bx, settingBtnY, btnW, btnH);
+                quitBounds.setBounds(bx, quitBtnY, btnW, btnH);
 
                 // draw CONTINUE button
                 paintStyledButton(g2, continueBounds, "Continue", hoverContinue, pressedContinue);
 
-                // draw START GAME button - stylized (blue + gold frame)
+                // draw START GAME button
                 paintStyledButton(g2, startGamesBounds, "Start Game", hoverStartGames, pressedStartGames);
+
+                // draw MINI GAMES button
+                paintStyledButton(g2, miniGamesBounds, "Mini Games", hoverMiniGames, pressedMiniGames);
 
                 // draw SETTINGS button
                 paintStyledButton(g2, settingBounds, "Settings", hoverSetting, pressedSetting);

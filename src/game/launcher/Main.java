@@ -22,7 +22,10 @@ public class Main {
 				startScene.setSkipJerryNextEnter(true);
 				sceneManager.setScene(startScene);
 			});
+			MiniGameCollectionScene miniGameCollectionScene = new MiniGameCollectionScene(() ->
+				sceneManager.setScene(startScene));
 			startScene.setOnStartGame(() -> sceneManager.setScene(chapterOne));
+			startScene.setOnMiniGames(() -> sceneManager.setScene(miniGameCollectionScene));
 
 			sceneManager.setScene(startScene);
 			frame.setVisible(true);
