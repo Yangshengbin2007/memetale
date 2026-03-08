@@ -192,45 +192,54 @@ public class ChapterOneScene extends JPanel implements Scene {
         postChapterTimer = new javax.swing.Timer(40, e -> {
             if (postChapterPhase == 0) return;
             long elapsed = System.currentTimeMillis() - postChapterStartTime;
-            if (postChapterPhase == 1) {
-                if (elapsed >= POST_BLACK_WAIT_MS) {
-                    postChapterPhase = 2;
-                    postChapterStartTime = System.currentTimeMillis();
-                    loadTitleStickerAndBeginOgg();
-                }
-            } else if (postChapterPhase == 2) {
-                if (beginOggClip != null && !beginOggClip.isRunning()) {
-                    postChapterPhase = 3;
-                    postChapterStartTime = System.currentTimeMillis();
-                } else if (beginOggClip == null && elapsed > 500) {
-                    postChapterPhase = 3;
-                    postChapterStartTime = System.currentTimeMillis();
-                }
-            } else if (postChapterPhase == 3) {
-                postChapterAlpha = Math.max(0f, 1f - (elapsed / (float) POST_TITLE_FADE_MS));
-                if (postChapterAlpha <= 0f) {
-                    postChapterPhase = 4;
-                    postChapterStartTime = System.currentTimeMillis();
-                    playChapterOneSoundAndShowText();
-                }
-            } else if (postChapterPhase == 4) {
-                postChapterAlpha = Math.min(1f, elapsed / (float) POST_CHAPTER_FADE_MS);
-                if (postChapterAlpha >= 1f) {
-                    postChapterPhase = 5;
-                    postChapterStartTime = System.currentTimeMillis();
-                }
-            } else if (postChapterPhase == 5) {
-                if (elapsed >= POST_CHAPTER_HOLD_MS) {
-                    postChapterPhase = 6;
-                    postChapterStartTime = System.currentTimeMillis();
-                }
-            } else if (postChapterPhase == 6) {
-                postChapterAlpha = Math.max(0f, 1f - (elapsed / (float) POST_CHAPTER_FADE_MS));
-                if (postChapterAlpha <= 0f) {
-                    postChapterPhase = 7;
-                    stopChapterOneSound();
-                    if (postChapterTimer != null) postChapterTimer.stop();
-                }
+            switch (postChapterPhase) {
+                case 1:
+                    if (elapsed >= POST_BLACK_WAIT_MS) {
+                        postChapterPhase = 2;
+                        postChapterStartTime = System.currentTimeMillis();
+                        loadTitleStickerAndBeginOgg();
+                    }
+                    break;
+                case 2:
+                    if (beginOggClip != null && !beginOggClip.isRunning()) {
+                        postChapterPhase = 3;
+                        postChapterStartTime = System.currentTimeMillis();
+                    } else if (beginOggClip == null && elapsed > 500) {
+                        postChapterPhase = 3;
+                        postChapterStartTime = System.currentTimeMillis();
+                    }
+                    break;
+                case 3:
+                    postChapterAlpha = Math.max(0f, 1f - (elapsed / (float) POST_TITLE_FADE_MS));
+                    if (postChapterAlpha <= 0f) {
+                        postChapterPhase = 4;
+                        postChapterStartTime = System.currentTimeMillis();
+                        playChapterOneSoundAndShowText();
+                    }
+                    break;
+                case 4:
+                    postChapterAlpha = Math.min(1f, elapsed / (float) POST_CHAPTER_FADE_MS);
+                    if (postChapterAlpha >= 1f) {
+                        postChapterPhase = 5;
+                        postChapterStartTime = System.currentTimeMillis();
+                    }
+                    break;
+                case 5:
+                    if (elapsed >= POST_CHAPTER_HOLD_MS) {
+                        postChapterPhase = 6;
+                        postChapterStartTime = System.currentTimeMillis();
+                    }
+                    break;
+                case 6:
+                    postChapterAlpha = Math.max(0f, 1f - (elapsed / (float) POST_CHAPTER_FADE_MS));
+                    if (postChapterAlpha <= 0f) {
+                        postChapterPhase = 7;
+                        stopChapterOneSound();
+                        if (postChapterTimer != null) postChapterTimer.stop();
+                    }
+                    break;
+                default:
+                    break;
             }
             repaint();
         });
