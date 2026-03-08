@@ -1,7 +1,9 @@
 package game.launcher;
 
 import game.scene.*;
-
+import java.awt.*;
+import java.io.File;
+import java.net.URL;
 import javax.swing.*;
 
 public class Main {
@@ -15,6 +17,20 @@ public class Main {
 			frame.setSize(800, 600);
 			frame.setLocationRelativeTo(null);
 			frame.setResizable(false);
+			Image icon = null;
+			URL iconUrl = Main.class.getResource("/Stickers/icon.png");
+			if (iconUrl != null) {
+				icon = new ImageIcon(iconUrl).getImage();
+			}
+			if (icon == null) {
+				File f = new File("Stickers/icon.png");
+				if (f.exists()) {
+					icon = new ImageIcon(f.getAbsolutePath()).getImage();
+				}
+			}
+			if (icon != null) {
+				frame.setIconImage(icon);
+			}
 
 			sceneManager = new SceneManager(frame);
 			StartScene startScene = new StartScene();
@@ -38,3 +54,4 @@ public class Main {
 		new Main().start();
 	}
 }
+
