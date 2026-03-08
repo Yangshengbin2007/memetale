@@ -5,6 +5,7 @@ import game.io.SaveLoad;
 // Explicit imports for Swing and AWT (required for desktop Java SE projects)
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -74,6 +75,10 @@ public class StartScene extends JPanel implements Scene {
 
     // 全局音量（0.0f ~ 1.0f），主菜单与游戏内设置共用
     private static float masterVolumeStatic = 1.0f;
+    /** Mute all music (BGM). Applied on Apply click. */
+    private static boolean muteAllMusicStatic = false;
+    /** Mute all sound effects. Applied on Apply click. */
+    private static boolean muteAllSoundEffectsStatic = false;
 
     public static float getMasterVolume() {
         return masterVolumeStatic;
@@ -82,6 +87,11 @@ public class StartScene extends JPanel implements Scene {
     public static void setMasterVolume(float v) {
         masterVolumeStatic = Math.max(0f, Math.min(1f, v));
     }
+
+    public static boolean getMuteAllMusic() { return muteAllMusicStatic; }
+    public static void setMuteAllMusic(boolean v) { muteAllMusicStatic = v; }
+    public static boolean getMuteAllSoundEffects() { return muteAllSoundEffectsStatic; }
+    public static void setMuteAllSoundEffects(boolean v) { muteAllSoundEffectsStatic = v; }
 
     // 主界面按钮交互状态
     private boolean hoverContinue = false;
@@ -397,13 +407,11 @@ public class StartScene extends JPanel implements Scene {
 
             slider = new JSlider(0, 100, (int) (masterVolumeStatic * 100));
             slider.setPaintTicks(true);
-            // 提升对比度，让刻度和数字更清晰
             slider.setForeground(new Color(240, 240, 240));
             slider.setBackground(new Color(60, 60, 60));
             slider.setMajorTickSpacing(25);
             slider.setMinorTickSpacing(5);
             slider.setPaintLabels(true);
-            // 点击轨道时拇指跳到该位置（光标点到哪音量就预览到哪，不改变主音量）
             slider.addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mousePressed(java.awt.event.MouseEvent e) {
@@ -418,24 +426,35 @@ public class StartScene extends JPanel implements Scene {
                 }
             });
 
-            // 设置内仅 ding 随滑块变；主页面音乐不变，只有点 Apply 才写入主音量
             slider.addChangeListener((ChangeListener) e -> {
                 if (!slider.getValueIsAdjusting())
                     playVolumeTestDingAt(slider.getValue() / 100f);
             });
 
+            JCheckBox muteMusicCheck = new JCheckBox("Mute all music", muteAllMusicStatic);
+            muteMusicCheck.setForeground(new Color(250, 250, 240));
+            muteMusicCheck.setOpaque(false);
+            JCheckBox muteSfxCheck = new JCheckBox("Mute all sound effects", muteAllSoundEffectsStatic);
+            muteSfxCheck.setForeground(new Color(250, 250, 240));
+            muteSfxCheck.setOpaque(false);
+
+            JPanel checkPanel = new JPanel(new GridLayout(2, 1, 4, 4));
+            checkPanel.setOpaque(false);
+            checkPanel.add(muteMusicCheck);
+            checkPanel.add(muteSfxCheck);
+
             center.add(lbl, BorderLayout.NORTH);
             center.add(slider, BorderLayout.CENTER);
+            center.add(checkPanel, BorderLayout.SOUTH);
             card.add(center, BorderLayout.CENTER);
 
-            // btns panel: Apply (confirm volume), Save (open save slots), Close
+            // btns panel: Apply (confirm volume + mute), Save (open save slots), Close
             JPanel btns = new JPanel();
             btns.setOpaque(false);
             JButton apply = new JButton("Apply");
             JButton saveGame = new JButton("Save");
             JButton close = new JButton("Close");
-            // styled buttons
-            Color btnBg = new Color(30, 144, 255); // DodgerBlue-like
+            Color btnBg = new Color(30, 144, 255);
             apply.setBackground(btnBg);
             apply.setForeground(Color.BLACK);
             saveGame.setBackground(btnBg);
@@ -448,6 +467,8 @@ public class StartScene extends JPanel implements Scene {
 
             apply.addActionListener(ev -> {
                 masterVolumeStatic = Math.max(0f, Math.min(1f, slider.getValue() / 100f));
+                muteAllMusicStatic = muteMusicCheck.isSelected();
+                muteAllSoundEffectsStatic = muteSfxCheck.isSelected();
                 updateAllVolumes();
                 dialog.dispose();
             });
@@ -889,6 +910,15 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
+     * Apply current master volume and mute flags to a Clip. isMusic: true = music (BGM), false = sound effect.
+     */
+    private void applyVolumeToClip(Clip clip, boolean isMusic) {
+        if (clip == null) return;
+        float effective = masterVolumeStatic * (isMusic ? (muteAllMusicStatic ? 0f : 1f) : (muteAllSoundEffectsStatic ? 0f : 1f));
+        applyVolumeToClip(clip, effective);
+    }
+
+    /**
      * 将指定音量应用到 Clip（不改变 masterVolumeStatic），用于设置里预览 ding。
      */
     private void applyVolumeToClip(Clip clip, float volume) {
@@ -911,18 +941,18 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 将当前 masterVolume 应用到指定 Clip。
+     * 将当前音量与静音设置应用到指定 Clip。仅用于本场景已有 Clip（无 isMusic 时按 SFX 处理）。
      */
     private void applyVolumeToClip(Clip clip) {
-        applyVolumeToClip(clip, masterVolumeStatic);
+        applyVolumeToClip(clip, false);
     }
 
     /**
-     * 将当前音量设置应用到所有已存在的声音资源。
+     * 将当前音量与静音设置应用到所有已存在的声音资源。
      */
     private void updateAllVolumes() {
-        applyVolumeToClip(jerryClip);
-        applyVolumeToClip(bgmClip);
+        applyVolumeToClip(jerryClip, false);  // sound effect
+        applyVolumeToClip(bgmClip, true);     // music
     }
 
     /** 静态：将指定音量应用到 Clip，供 playVolumeTestDingAt 使用 */
