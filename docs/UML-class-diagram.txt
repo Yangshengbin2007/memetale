@@ -1,0 +1,148 @@
+================================================================================
+                    memetale RPG - UML Class Diagram
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            game.launcher                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│ +Main                                                                   │
+│   -JFrame frame                                                         │
+│   -SceneManager sceneManager                                            │
+│   +start()                                                              │
+│   +main(String[] args)                                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ uses
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            game.scene                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│ <<interface>>                                                            │
+│ Scene                                                                    │
+│   +onEnter()                                                            │
+│   +onExit()                                                             │
+│   +getPanel(): JPanel                                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+         ▲                    ▲                    ▲
+         │                    │                    │
+         │ implements         │ implements         │ implements
+         │                    │                    │
+┌────────┴────────┐  ┌────────┴────────┐  ┌────────┴────────┐
+│  StartScene      │  │ ChapterOneScene│  │MiniGameCollection│
+│  extends JPanel  │  │ extends JPanel │  │Scene extends JPanel│
+├──────────────────┤  ├────────────────┤  ├──────────────────┤
+│ -Image jerryImg  │  │ -Image chapterBg│  │ -Runnable onBack│
+│ -Clip bgmClip    │  │ -Clip cgBgmClip │  │                  │
+│ -State state     │  │ -int currentCg │  │                  │
+│ +onEnter()       │  │ +onEnter()      │  │ +onEnter()       │
+│ +onExit()        │  │ +onExit()       │  │ +onExit()        │
+│ +getPanel()      │  │ +getPanel()     │  │ +getPanel()      │
+└──────────────────┘  └────────────────┘  └──────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SceneManager                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│ -JFrame frame                                                           │
+│ -Scene currentScene                                                     │
+│ -Deque<Scene> sceneStack                                                │
+│ +setScene(Scene)                                                       │
+│ +getCurrentScene(): Scene                                               │
+│ +pushScene(Scene)                                                       │
+│ +popScene()                                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            game.model                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│ GameState (Singleton)                                                   │
+│   -static StoryState state                                              │
+│   +getState(): StoryState                                               │
+│   +setState(StoryState)                                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ contains
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ StoryState implements Serializable                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│ -int chapterOneDialogueIndex                                            │
+│ -int savedChapter                                                       │
+│ -Map<String, Boolean> flags                                             │
+│ -List<DialogueRecord> chapterOneHistory                                 │
+│ +getFlags(): Map<String, Boolean>                                       │
+│ +getChapterOneHistory(): List<DialogueRecord>                           │
+│ +addChapterOneHistory(String, String)                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ contains
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ DialogueRecord implements Serializable                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│ -String speaker                                                         │
+│ -String text                                                            │
+│ +getSpeaker(): String                                                   │
+│ +getText(): String                                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ChapterOneData (Static Utility)                                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│ +static String[][] LINES                                               │
+│ +static int cgIndexForLine(int): int                                    │
+│ +static String bgFileForCg(int): String                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            game.io                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│ SaveLoad                                                                │
+│   +save(StoryState, String): void                                      │
+│   +load(String): StoryState                                            │
+│   +getSavedChapter(String): int                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ uses
+                              ▼
+                        StoryState (serialization)
+
+================================================================================
+Key Relationships:
+================================================================================
+
+1. Main → SceneManager → Scene (interface)
+   - Main creates SceneManager
+   - SceneManager manages Scene instances
+
+2. Scene implementations:
+   - StartScene, ChapterOneScene, MiniGameCollectionScene all implement Scene
+   - All extend JPanel for Swing UI
+
+3. GameState (Singleton) → StoryState
+   - Global access point for game state
+   - StoryState contains game progress
+
+4. StoryState → DialogueRecord
+   - History stored as List of DialogueRecord
+
+5. SaveLoad → StoryState
+   - Serialization/deserialization for save/load
+
+6. ChapterOneData
+   - Static utility class with dialogue data
+   - Used by ChapterOneScene
+
+================================================================================
+Programming Concepts Demonstrated:
+================================================================================
+
+✓ Collections: ArrayList, HashMap, Deque, List, Map
+✓ File I/O: FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream
+✓ Exception Handling: try-catch blocks, try-with-resources
+✓ Enhanced For Loops: Used for iterating collections
+✓ Multidimensional Arrays: String[][] in ChapterOneData
+✓ Interface: Scene interface
+✓ Inheritance: Classes extend JPanel
+✓ Serialization: StoryState and DialogueRecord implement Serializable
+
+================================================================================

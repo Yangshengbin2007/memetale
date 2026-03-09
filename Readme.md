@@ -33,6 +33,91 @@ In this mystery adventure game, players gradually uncover the truth of the world
 - **Theme**:
   - "When you have to make a choice, don't let yourself regret it."
 
-## Story Outline (separate document)
+## How to Run
 
-A detailed story outline for **memetale rpg** — including chapter structure, key choices, endings, and meme references — will be maintained in a dedicated story document (e.g. `story-outline.md`) to keep this README focused on the high-level overview.
+### Prerequisites
+- Java 18 or later installed
+- macOS, Windows, or Linux
+
+### Running the Game
+
+**macOS:**
+1. Double-click `run.command` (first time: right-click → Open)
+2. Or in Terminal: `./run.command`
+
+**Windows:**
+1. Double-click `run.bat`
+2. Or in Command Prompt: `run.bat`
+
+**Linux:**
+1. In Terminal: `./run.sh`
+2. Or: `bash run.sh`
+
+The script will automatically compile and run the game.
+
+### Manual Compilation (if needed)
+```bash
+# Compile
+javac -encoding UTF-8 -d out -sourcepath src src/game/launcher/Main.java
+
+# Run
+java -cp out game.launcher.Main
+```
+
+## Current Working Features
+
+### ✅ Implemented Features
+- **Main Menu System**
+  - Start Game button
+  - Continue/Load Game functionality
+  - Settings (volume control, mute options)
+  - Mini Games collection menu
+  - Quit option
+
+- **Chapter One - Meme Forest**
+  - Full dialogue system with typewriter effect
+  - Multiple CG (background) transitions
+  - Character dialogue with speaker names
+  - Click-to-advance dialogue
+  - Space key for quick advance
+  - Chapter title sequence
+
+- **Save/Load System**
+  - Save to 8 different slots
+  - Load from saved slots
+  - Delete save slots
+  - Chapter progress tracking
+
+- **Settings**
+  - Master volume control
+  - Mute music option
+  - Mute sound effects option
+  - Volume test preview
+
+- **Audio System**
+  - Background music (BGM) for different scenes
+  - Sound effects (button clicks, dialogue sounds)
+  - Volume control integration
+  - Audio file loading from resources
+
+- **Scene Management**
+  - Scene switching system
+  - Fade in/out transitions
+  - Scene stack for navigation
+
+- **Game State Management**
+  - Story state tracking
+  - Dialogue history
+  - Chapter progress
+  - Flag system for choices
+
+### 🚧 In Progress / Planned
+- Chapter Two and Three
+- Multiple endings implementation
+- Mini-games collection
+- More dialogue branches
+- Additional CGs and assets
+
+## Story Outline
+
+A detailed story outline for **memetale rpg** — including chapter structure, key choices, endings, and meme references — is maintained in `story-outline.md`.
