@@ -1,0 +1,147 @@
+package game.model.forest;
+
+/**
+ * 森林入口对话：Prince meets Darabongba。
+ * 每行 [speaker, text, princeExpression, darabongbaExpression]。
+ * speaker = "Prince" | "Darabongba"。达拉崩吧的 surprise/resentment 在绘制时水平镜像以贴右。
+ */
+public final class ForestEntranceData {
+    private ForestEntranceData() {}
+
+    /** 表情键：default, surprise, resentment, proud, nervous, annoyed, thoughtful */
+    public static final String EXPR_DEFAULT = "default";
+    public static final String EXPR_SURPRISE = "surprise";
+    public final static String EXPR_RESENTMENT = "resentment";
+    public static final String EXPR_PROUD = "proud";
+    public static final String EXPR_NERVOUS = "nervous";
+    public static final String EXPR_ANNOYED = "annoyed";
+    public static final String EXPR_THOUGHTFUL = "thoughtful";
+
+    /** 达拉崩吧在以下表情时需水平镜像，保证人物贴右侧 */
+    public static boolean mirrorDarabongba(String expr) {
+        return EXPR_SURPRISE.equals(expr) || EXPR_RESENTMENT.equals(expr);
+    }
+
+    /** 每行: speaker, text, princeExpr, darabongbaExpr */
+    public static final String[][] LINES = {
+        {"Prince", "Whoa! Are you okay?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "Define \"okay\".", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "You just fell out of a tree.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Tactical descent.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You screamed.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "War cry.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You said \"help\".", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Emotional war cry.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Who are you?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"", "Darabongba stands up dramatically.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "I am Sir Darabongba Bandebedibub Dobiruwong.", EXPR_DEFAULT, EXPR_PROUD},
+        {"", "Prince stares.", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Prince", "I think my brain rebooted.", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "That happens a lot.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "Was that your name or a spell?", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Both, depending on pronunciation.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Say that again.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"", "Darabongba proudly repeats:", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Sir Darabongba Bandebedibub Dobiruwong.", EXPR_DEFAULT, EXPR_PROUD},
+        {"Prince", "I heard three languages fighting each other.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "My parents were creative.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Your parents were villains.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "They said the name would be memorable.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Oh it's memorable.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "Mostly because I can't remember it.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Prince", "Can I just call you Darabongba?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "That's the tutorial version.", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "There's a harder difficulty?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "You heard it already.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "No I didn't.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Exactly.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "What do your friends call you?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Silence.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You don't have friends?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "Not after introductions.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Fair.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "I'm Prince—", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Yes I know.", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "You know me?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "You're the guy with the dragon problem.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "It's not a problem.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Prince", "It's a rescue mission.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "A rescue mission involving a dragon is definitely a problem.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "My fiancée was kidnapped.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "That happens a lot around here.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "It shouldn't.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Tell that to the dragons.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "I'm going to save her.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "That is extremely heroic.", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "Thank you.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Also extremely dangerous.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Less thank you.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Prince", "What were you doing in that tree?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Strategic observation.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You were hiding.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Strategically.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "From what?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "A goose.", EXPR_DEFAULT, EXPR_NERVOUS},
+        {"Prince", "A goose?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "It had anger issues.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You are a knight.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Yes.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "You were defeated by a goose.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "It was a very confident goose.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "How did you become a knight?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Long story.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Short version.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Paperwork error.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "That explains the armor.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "It's mostly decorative.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"", "Prince taps the armor. It rattles.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "Is that a frying pan inside?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "Emergency equipment.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "For cooking?", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "For survival.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Same thing.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Prince", "Do you know this forest?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Unfortunately yes.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Good. You can guide me.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "That seems like a terrible idea.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Why?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Because I get lost in straight hallways.", EXPR_DEFAULT, EXPR_NERVOUS},
+        {"Prince", "This is a forest.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Exactly.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Do you at least know where the dragon went?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "North. Probably.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Probably?", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Dragons are bad at leaving forwarding addresses.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "I need help.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "You definitely do.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "I'm asking you.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "That's concerning.", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "Why?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Because I'm saying yes.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You're joining?", EXPR_SURPRISE, EXPR_DEFAULT},
+        {"Darabongba", "Someone needs to document your mistakes.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You'll help fight the dragon?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Let's not rush into promises.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "At least the smaller monsters?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Define smaller.", EXPR_DEFAULT, EXPR_SURPRISE},
+        {"Prince", "Anything goose-sized.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Absolutely not.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You're useless.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "I'm emotionally supportive.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You're sarcastically supportive.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "That's my brand.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Alright Darabongba. Let's go rescue a princess.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"", "Darabongba looks around the forest nervously.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Before we start…", EXPR_DEFAULT, EXPR_NERVOUS},
+        {"Prince", "What?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "If we see anything glowing, cursed, or suspicious—", EXPR_DEFAULT, EXPR_NERVOUS},
+        {"Prince", "Yes?", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "We run.", EXPR_DEFAULT, EXPR_NERVOUS},
+        {"Prince", "Heroes don't run.", EXPR_ANNOYED, EXPR_DEFAULT},
+        {"Darabongba", "Side characters do.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "You're not a side character.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "We'll see.", EXPR_DEFAULT, EXPR_RESENTMENT},
+        {"Prince", "Adventure begins.", EXPR_DEFAULT, EXPR_DEFAULT},
+        {"Darabongba", "Regret begins.", EXPR_DEFAULT, EXPR_NERVOUS},
+    };
+}

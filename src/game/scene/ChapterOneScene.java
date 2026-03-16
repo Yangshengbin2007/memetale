@@ -20,6 +20,8 @@ import javax.sound.sampled.*;
 @SuppressWarnings("fallthrough")
 public class ChapterOneScene extends JPanel implements Scene {
     private final Runnable onQuitToTitle;
+    /** 第一章结尾黑屏 phase 7 点击 Continue 后进入森林入口，可为 null */
+    private final Runnable onChapterOneComplete;
     private Image chapterBg;
     /** 当前显示的 CG 编号 1/2/3，用于避免重复 load */
     private int currentCgIndex = 0;
@@ -109,8 +111,9 @@ public class ChapterOneScene extends JPanel implements Scene {
     private static final int POST_CHAPTER_HOLD_MS = 1500;
     private javax.swing.Timer postChapterTimer;
 
-    public ChapterOneScene(Runnable onQuitToTitle) {
+    public ChapterOneScene(Runnable onQuitToTitle, Runnable onChapterOneComplete) {
         this.onQuitToTitle = onQuitToTitle;
+        this.onChapterOneComplete = onChapterOneComplete;
         setBackground(Color.BLACK);
         loadBackgroundForDialogueIndex(0);
         initEnterFadeTimer();
@@ -236,6 +239,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                         postChapterPhase = 7;
                         stopChapterOneSound();
                         if (postChapterTimer != null) postChapterTimer.stop();
+                        scheduleTransitionToForest();
                     }
                     break;
                 default:
@@ -243,6 +247,18 @@ public class ChapterOneScene extends JPanel implements Scene {
             }
             repaint();
         });
+    }
+
+    private static final int FOREST_TRANSITION_DELAY_MS = 1800;
+
+    private void scheduleTransitionToForest() {
+        if (onChapterOneComplete == null) return;
+        javax.swing.Timer t = new javax.swing.Timer(FOREST_TRANSITION_DELAY_MS, e -> {
+            ((javax.swing.Timer) e.getSource()).stop();
+            if (onChapterOneComplete != null) onChapterOneComplete.run();
+        });
+        t.setRepeats(false);
+        t.start();
     }
 
     private void startPostChapterSequence() {
@@ -571,7 +587,13 @@ public class ChapterOneScene extends JPanel implements Scene {
                     g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
                 }
             }
-            // phase 7 or 0: black only (future interactive map)
+            if (postChapterPhase == 7) {
+                g2.setColor(new Color(200, 220, 180));
+                g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
+                FontMetrics fm = g2.getFontMetrics();
+                String txt = "Heading to the forest...";
+                g2.drawString(txt, (w - fm.stringWidth(txt)) / 2, h / 2 + 20);
+            }
         }
         // 进入游戏：黑屏遮罩 + 中央引言（读档时跳过）
         if (enterFadeAlpha > 0f) {
@@ -758,25 +780,27 @@ public class ChapterOneScene extends JPanel implements Scene {
         MouseAdapter ma = new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                if (!pauseMenuVisible) return;
                 Point p = e.getPoint();
-                hoverPauseSave = pauseSaveBounds.contains(p);
-                hoverPauseLoad = pauseLoadBounds.contains(p);
-                hoverPauseSettings = pauseSettingsBounds.contains(p);
-                hoverPauseHistory = pauseHistoryBounds.contains(p);
-                hoverPauseQuit = pauseQuitBounds.contains(p);
+                if (pauseMenuVisible) {
+                    hoverPauseSave = pauseSaveBounds.contains(p);
+                    hoverPauseLoad = pauseLoadBounds.contains(p);
+                    hoverPauseSettings = pauseSettingsBounds.contains(p);
+                    hoverPauseHistory = pauseHistoryBounds.contains(p);
+                    hoverPauseQuit = pauseQuitBounds.contains(p);
+                }
                 repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!pauseMenuVisible) return;
                 Point p = e.getPoint();
-                pressedPauseSave = pauseSaveBounds.contains(p);
-                pressedPauseLoad = pauseLoadBounds.contains(p);
-                pressedPauseSettings = pauseSettingsBounds.contains(p);
-                pressedPauseHistory = pauseHistoryBounds.contains(p);
-                pressedPauseQuit = pauseQuitBounds.contains(p);
+                if (pauseMenuVisible) {
+                    pressedPauseSave = pauseSaveBounds.contains(p);
+                    pressedPauseLoad = pauseLoadBounds.contains(p);
+                    pressedPauseSettings = pauseSettingsBounds.contains(p);
+                    pressedPauseHistory = pauseHistoryBounds.contains(p);
+                    pressedPauseQuit = pauseQuitBounds.contains(p);
+                }
                 repaint();
             }
 
@@ -833,8 +857,8 @@ public class ChapterOneScene extends JPanel implements Scene {
             public void mouseExited(MouseEvent e) {
                 if (pauseMenuVisible) {
                     clearPauseHover();
-                    repaint();
                 }
+                repaint();
             }
         };
         addMouseListener(ma);
@@ -1120,30 +1144,38 @@ public class ChapterOneScene extends JPanel implements Scene {
 
     @Override
     public void onEnter() {
+        boolean skipIntro = skipQuoteNextEnter;
+        if (skipQuoteNextEnter) skipQuoteNextEnter = false;
+
         StoryState state = GameState.getState();
         lastUsedSaveSlot = state.getLastUsedSaveSlot();
         int idx = state.getChapterOneDialogueIndex();
         loadBackgroundForDialogueIndex(idx);
-        if (idx >= ChapterOneData.LINES.length) {
-            chapterTitlePhase = 4;
-            chapterEndBlackScreen = true;
-            startPostChapterSequence();
-        } else {
-            chapterTitlePhase = 0;
-            chapterEndBlackScreen = false;
-            chapterEndFadeOutActive = false;
-        }
         lineStartTime = System.currentTimeMillis();
-        if (skipQuoteNextEnter) {
-            skipQuoteNextEnter = false;
+
+        if (skipIntro) {
             enterFadeAlpha = 0f;
             quoteTextAlpha = 0f;
-            if (idx < ChapterOneData.LINES.length)
-                startSceneFade();
-            else
-                sceneFadeAlpha = 1f;
             chapterEndFadeOutActive = false;
+            if (idx >= ChapterOneData.LINES.length) {
+                chapterTitlePhase = 4;
+                chapterEndBlackScreen = true;
+                sceneFadeAlpha = 1f;
+            } else {
+                chapterTitlePhase = 0;
+                chapterEndBlackScreen = false;
+                startSceneFade();
+            }
         } else {
+            if (idx >= ChapterOneData.LINES.length) {
+                chapterTitlePhase = 4;
+                chapterEndBlackScreen = true;
+                startPostChapterSequence();
+            } else {
+                chapterTitlePhase = 0;
+                chapterEndBlackScreen = false;
+                chapterEndFadeOutActive = false;
+            }
             enterFadeAlpha = 1f;
             quoteTextAlpha = 0f;
             enterFadeStartTime = System.currentTimeMillis();

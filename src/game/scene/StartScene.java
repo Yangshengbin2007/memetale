@@ -1029,7 +1029,6 @@ public class StartScene extends JPanel implements Scene {
             if (c == JOptionPane.YES_OPTION) {
                 GameState.getState().setChapterOneDialogueIndex(ChapterOneData.LINES.length);
                 GameState.getState().setSavedChapter(1);
-                ChapterOneScene.setSkipQuoteNextEnter(true);
                 dialog.dispose();
                 if (onStartGame != null) onStartGame.run();
             }
@@ -1089,7 +1088,6 @@ public class StartScene extends JPanel implements Scene {
             if (c == JOptionPane.YES_OPTION) {
                 GameState.getState().setChapterOneDialogueIndex(ChapterOneData.LINES.length);
                 GameState.getState().setSavedChapter(1);
-                ChapterOneScene.setSkipQuoteNextEnter(true);
                 dialog.dispose();
                 if (onStartGame != null) onStartGame.run();
             }

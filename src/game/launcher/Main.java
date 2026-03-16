@@ -18,12 +18,12 @@ public class Main {
 			frame.setLocationRelativeTo(null);
 			frame.setResizable(false);
 			Image icon = null;
-			URL iconUrl = Main.class.getResource("/Stickers/icon.png");
+			URL iconUrl = Main.class.getResource("/Stickers/title.png");
 			if (iconUrl != null) {
 				icon = new ImageIcon(iconUrl).getImage();
 			}
 			if (icon == null) {
-				File f = new File("Stickers/icon.png");
+				File f = new File("Stickers/title.png");
 				if (f.exists()) {
 					icon = new ImageIcon(f.getAbsolutePath()).getImage();
 				}
@@ -34,13 +34,28 @@ public class Main {
 
 			sceneManager = new SceneManager(frame);
 			StartScene startScene = new StartScene();
-			ChapterOneScene chapterOne = new ChapterOneScene(() -> {
-				startScene.setSkipJerryNextEnter(true);
-				sceneManager.setScene(startScene);
-			});
 			MiniGameCollectionScene miniGameCollectionScene = new MiniGameCollectionScene(() -> {
 				startScene.setSkipJerryNextEnter(true);
 				sceneManager.setScene(startScene);
+			});
+			ForestOverworldMapScene forestOverworldMapScene = new ForestOverworldMapScene(sceneManager);
+			ForestEntranceScene forestEntranceScene = new ForestEntranceScene(
+				() -> sceneManager.setScene(forestOverworldMapScene),
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				}
+			);
+			ChapterOneScene chapterOne = new ChapterOneScene(
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				},
+				() -> sceneManager.setScene(forestEntranceScene)
+			);
+			forestEntranceScene.setOnLoadSwitchToChapterOne(() -> {
+				ChapterOneScene.setSkipQuoteNextEnter(true);
+				sceneManager.setScene(chapterOne);
 			});
 			startScene.setOnStartGame(() -> sceneManager.setScene(chapterOne));
 			startScene.setOnMiniGames(() -> sceneManager.setScene(miniGameCollectionScene));
