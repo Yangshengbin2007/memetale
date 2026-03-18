@@ -39,10 +39,10 @@ public class Main {
 					startScene.setSkipJerryNextEnter(true);
 					sceneManager.setScene(startScene);
 				});
-			TrollBattleScene trollBattleMinigameNormal = new TrollBattleScene(false,
+			TrollBattleScene trollBattleMinigameNormal = new TrollBattleScene(false, false,
 				() -> sceneManager.setScene(miniGameCollectionScene),
 				() -> sceneManager.setScene(miniGameCollectionScene));
-			TrollBattleScene trollBattleMinigameHell = new TrollBattleScene(true,
+			TrollBattleScene trollBattleMinigameHell = new TrollBattleScene(true, false,
 				() -> sceneManager.setScene(miniGameCollectionScene),
 				() -> sceneManager.setScene(miniGameCollectionScene));
 			miniGameCollectionScene.setLaunchTrollBattle(() -> sceneManager.setScene(trollBattleMinigameNormal),
@@ -63,7 +63,7 @@ public class Main {
 				}
 			);
 			TrollBattleScene trollBattleScene = new TrollBattleScene(
-				false,
+				false, true,
 				() -> sceneManager.setScene(trollCavePostBattleScene),
 				() -> {
 					startScene.setSkipJerryNextEnter(true);

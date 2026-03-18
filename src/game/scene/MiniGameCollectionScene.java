@@ -120,9 +120,12 @@ public class MiniGameCollectionScene extends JPanel implements Scene {
         g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 12f));
         g2.setColor(new Color(180, 180, 170));
         g2.drawString("Undertale-style bullet hell. Dodge the cancel culture.", boxX + 20, boxY + 48);
+        g2.setColor(new Color(140, 160, 150));
+        g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 11f));
+        g2.drawString("Always available — no story progress required.", boxX + 20, boxY + 62);
         int tBtnW = 140;
         int tBtnH = 36;
-        int tBy = boxY + boxH * 8 / 35;
+        int tBy = boxY + 76;
         int normalX = boxX + 24;
         int hellX = boxX + boxW - 24 - tBtnW;
         trollNormalBounds.setBounds(normalX, tBy, tBtnW, tBtnH);

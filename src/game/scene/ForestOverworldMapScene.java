@@ -252,7 +252,8 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
             try { if (mapMusicClip.isRunning()) mapMusicClip.stop(); mapMusicClip.close(); } catch (Exception ignore) {}
             mapMusicClip = null;
         }
-        mapMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
+        mapMusicClip = StartScene.loadMusicFromMusicDir("map.wav");
+        if (mapMusicClip == null) mapMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
         if (mapMusicClip != null) {
             StartScene.applyVolumeToClipForScene(mapMusicClip, true);
             mapMusicClip.loop(Clip.LOOP_CONTINUOUSLY);

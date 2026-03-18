@@ -84,20 +84,26 @@ public final class ForestImageLoader {
                 if (img != null) return img;
             }
         } else if ("troll_boss".equalsIgnoreCase(character)) {
-            // Actual assets: Stickers/people/Troll face/Trollface (1).png, angry (1).png
+            // Stickers/people/Troll face/: try English names first (default.png, laugh.png, defeat.png, scared.png, angry.png), then legacy (1).png names
             String trollFaceDir = "Stickers/people/Troll face/";
-            String defaultFn = "Trollface (1).png";
-            String angryFn = "angry (1).png";
-            if ("default".equals(expr)) {
-                Image img = fromFile(trollFaceDir + defaultFn);
-                if (img != null) return img;
-                img = fromClasspath("/Stickers/people/Troll%20face/" + defaultFn.replace(" ", "%20"));
-                if (img != null) return img;
-            } else if ("angry".equals(expr)) {
-                Image img = fromFile(trollFaceDir + angryFn);
-                if (img != null) return img;
-                img = fromClasspath("/Stickers/people/Troll%20face/" + angryFn.replace(" ", "%20"));
-                if (img != null) return img;
+            String[][] trollExprFiles = {
+                { "default", "default.png", "Trollface (1).png" },
+                { "angry", "angry.png", "angry (1).png" },
+                { "defeat", "defeat.png", "defead (1).png" },
+                { "scared", "scared.png", "scard (1).png" },
+                { "laugh", "laugh.png", "superlaugh (1).png" }
+            };
+            for (String[] pair : trollExprFiles) {
+                if (pair[0].equals(expr)) {
+                    for (int i = 1; i < pair.length; i++) {
+                        String fn = pair[i];
+                        Image img = fromFile(trollFaceDir + fn);
+                        if (img != null) return img;
+                        img = fromClasspath("/Stickers/people/Troll%20face/" + fn.replace(" ", "%20"));
+                        if (img != null) return img;
+                    }
+                    break;
+                }
             }
             // Fallback: troll_boss.png / troll_boss_angry.png in other dirs
             String fn = "default".equals(expr) ? "troll_boss.png" : "troll_boss_" + expr + ".png";

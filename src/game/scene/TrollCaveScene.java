@@ -89,6 +89,9 @@ public class TrollCaveScene extends JPanel implements Scene {
         loadDarabongba(ForestResources.DARABONGBA_NERVOUS);
         loadTrollBoss(TrollCaveData.TROLL_DEFAULT);
         loadTrollBoss(TrollCaveData.TROLL_ANGRY);
+        loadTrollBoss(TrollCaveData.TROLL_LAUGH);
+        loadTrollBoss(TrollCaveData.TROLL_SCARED);
+        loadTrollBoss(TrollCaveData.TROLL_DEFEAT);
     }
 
     private void loadPrince(String expr) {
@@ -249,9 +252,8 @@ public class TrollCaveScene extends JPanel implements Scene {
         long elapsed = lineStartTime > 0 ? System.currentTimeMillis() - lineStartTime : TEXT_DURATION_MS;
         int totalChars = text.length();
         int visibleChars = totalChars == 0 ? 0 : (int) Math.min(totalChars, (long) totalChars * elapsed / TEXT_DURATION_MS);
-        if (visibleChars < totalChars) {
-            lineIndex = lineIndex;
-            lineStartTime = System.currentTimeMillis();
+        if (!fastForwardActive && visibleChars < totalChars) {
+            lineStartTime = System.currentTimeMillis() - TEXT_DURATION_MS;
             repaint();
             return;
         }
@@ -321,34 +323,35 @@ public class TrollCaveScene extends JPanel implements Scene {
         int boxY = h - boxH;
         int charH = (int) (h * CHARACTER_HEIGHT_RATIO);
         int charY = boxY - (int) (charH * CHARACTER_KNEE_ALIGN_RATIO);
-        int charW = (int) (w * 0.38);
-        int leftX = (int) (w * 0.06);
-        int rightX = (int) (w * 0.52);
+        int charW = (int) (w * 0.32);
+        int leftX = (int) (w * 0.04);
+        int centerX = (int) (w * 0.34);
+        int rightX = (int) (w * 0.58);
 
         if (showTrollRight) {
+            Image princeImg = getPrinceImage(princeExpr);
+            if (princeImg != null) {
+                float alpha = princeSpeaking ? 1f : DIM_ALPHA;
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                drawCharacter(g2, princeImg, leftX, charY, charW, charH, false);
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+            }
             Image trollImg = getTrollBossImage(trollExpr);
             if (trollImg != null) {
                 float alpha = trollSpeaking ? 1f : DIM_ALPHA;
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                drawCharacter(g2, trollImg, rightX, charY, charW, charH, false);
+                int trollW = (int)(charW * 0.85);
+                int trollH = (int)(charH * 0.55);
+                int trollY = boxY - trollH;
+                drawCharacter(g2, trollImg, centerX, trollY, trollW, trollH, false);
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
-            boolean darabongbaOnLeft = darabongbaSpeaking;
-            if (darabongbaOnLeft) {
-                Image daraImg = getDarabongbaImage(darabongbaExpr);
-                if (daraImg != null) {
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-                    drawCharacter(g2, daraImg, leftX, charY, charW, charH, true);
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-                }
-            } else {
-                Image princeImg = getPrinceImage(princeExpr);
-                if (princeImg != null) {
-                    float alpha = princeSpeaking ? 1f : DIM_ALPHA;
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                    drawCharacter(g2, princeImg, leftX, charY, charW, charH, false);
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
-                }
+            Image daraImg = getDarabongbaImage(darabongbaExpr);
+            if (daraImg != null) {
+                float alpha = darabongbaSpeaking ? 1f : DIM_ALPHA;
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                drawCharacter(g2, daraImg, rightX, charY, charW, charH, false);
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
         } else {
             Image princeImg = getPrinceImage(princeExpr);
@@ -362,7 +365,7 @@ public class TrollCaveScene extends JPanel implements Scene {
             if (daraImg != null) {
                 float alpha = darabongbaSpeaking ? 1f : DIM_ALPHA;
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                drawCharacter(g2, daraImg, rightX, charY, charW, charH, ForestEntranceData.mirrorDarabongba(darabongbaExpr));
+                drawCharacter(g2, daraImg, rightX, charY, charW, charH, false);
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
         }
@@ -659,11 +662,12 @@ public class TrollCaveScene extends JPanel implements Scene {
             try { if (caveMusicClip.isRunning()) caveMusicClip.stop(); caveMusicClip.close(); } catch (Exception ignore) {}
             caveMusicClip = null;
         }
-        caveMusicClip = StartScene.loadMusicFromMusicDir("trollcave.mp3");
+        caveMusicClip = StartScene.loadMusicFromMusicDir("trollcave.wav");
+        if (caveMusicClip == null) caveMusicClip = StartScene.loadMusicFromMusicDir("trollcave.mp3");
         if (caveMusicClip != null) {
             StartScene.applyVolumeToClipForScene(caveMusicClip, true);
             caveMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-            caveMusicClip.start();
+            try { caveMusicClip.start(); } catch (Exception ignored) {}
         }
         requestFocusInWindow();
     }

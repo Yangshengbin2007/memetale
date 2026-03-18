@@ -90,6 +90,9 @@ public class ForestEntranceScene extends JPanel implements Scene {
     /** 点错地标时显示骑士单独台词，不弹窗；非 null 时在选点界面显示一句对话，点击后清除 */
     private String wrongDestinationMessage = null;
     private Clip forestMusicClip;
+    /** When choosing Troll Cave: quick fade instead of black screen; start time for fade overlay */
+    private long trollCaveFadeStartTime = 0L;
+    private static final int TROLL_CAVE_FADE_MS = 380;
 
     public ForestEntranceScene(Runnable onEnterForest) {
         this(onEnterForest, null);
@@ -134,6 +137,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
                 phase = PHASE_MAP_DIALOGUE;
                 mapLineIndex = 0;
                 lineStartTime = System.currentTimeMillis();
+                switchToMapMusic();
                 fastForwardTimer.stop();
             } else if (phase == PHASE_MAP_DIALOGUE && mapLineIndex < ForestMapData.LINES.length - 1) {
                 mapLineIndex++;
@@ -144,6 +148,21 @@ public class ForestEntranceScene extends JPanel implements Scene {
             }
             repaint();
         });
+    }
+
+    /** Stop beginforest and start map.wav when entering map dialogue. */
+    private void switchToMapMusic() {
+        if (forestMusicClip != null) {
+            try { if (forestMusicClip.isRunning()) forestMusicClip.stop(); forestMusicClip.close(); } catch (Exception ignore) {}
+            forestMusicClip = null;
+        }
+        forestMusicClip = StartScene.loadMusicFromMusicDir("map.wav");
+        if (forestMusicClip == null) forestMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
+        if (forestMusicClip != null) {
+            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
+            forestMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            forestMusicClip.start();
+        }
     }
 
     private void initKey() {
@@ -206,6 +225,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
                 phase = PHASE_MAP_DIALOGUE;
                 mapLineIndex = 0;
                 lineStartTime = System.currentTimeMillis();
+                switchToMapMusic();
             }
         } else if (phase == PHASE_MAP_DIALOGUE) {
             if (mapLineIndex < ForestMapData.LINES.length - 1) {
@@ -346,6 +366,16 @@ public class ForestEntranceScene extends JPanel implements Scene {
                             }
                             chosenLandmarkId = id;
                             phase = PHASE_BLACK_SCREEN;
+                            if ("troll_cave".equals(id)) {
+                                trollCaveFadeStartTime = System.currentTimeMillis();
+                                javax.swing.Timer t = new javax.swing.Timer(TROLL_CAVE_FADE_MS, ev -> {
+                                    ((javax.swing.Timer)ev.getSource()).stop();
+                                    if (onLandmarkChosen != null && "troll_cave".equals(chosenLandmarkId))
+                                        onLandmarkChosen.accept(chosenLandmarkId);
+                                });
+                                t.setRepeats(false);
+                                t.start();
+                            }
                             repaint();
                             return;
                         }
@@ -396,6 +426,32 @@ public class ForestEntranceScene extends JPanel implements Scene {
         int w = getWidth(), h = getHeight();
 
         if (phase == PHASE_BLACK_SCREEN) {
+            if ("troll_cave".equals(chosenLandmarkId)) {
+                if (bgMap != null) {
+                    int iw = bgMap.getWidth(this);
+                    int ih = bgMap.getHeight(this);
+                    if (iw > 0 && ih > 0) {
+                        double scale = Math.max((double) w / iw, (double) h / ih);
+                        int sw = (int) Math.ceil(iw * scale);
+                        int sh = (int) Math.ceil(ih * scale);
+                        int x = (w - sw) / 2;
+                        int y = (h - sh) / 2;
+                        g2.drawImage(bgMap, x, y, sw, sh, this);
+                    }
+                } else {
+                    g2.setColor(new Color(25, 50, 25));
+                    g2.fillRect(0, 0, w, h);
+                }
+                long elapsed = System.currentTimeMillis() - trollCaveFadeStartTime;
+                float alpha = Math.min(1f, (float) elapsed / TROLL_CAVE_FADE_MS);
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                g2.setColor(Color.BLACK);
+                g2.fillRect(0, 0, w, h);
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+                if (alpha < 1f) repaint(30);
+                g2.dispose();
+                return;
+            }
             g2.setColor(Color.BLACK);
             g2.fillRect(0, 0, w, h);
             int btnW = 200;
@@ -861,7 +917,8 @@ public class ForestEntranceScene extends JPanel implements Scene {
             try { if (forestMusicClip.isRunning()) forestMusicClip.stop(); forestMusicClip.close(); } catch (Exception ignore) {}
             forestMusicClip = null;
         }
-        forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.mp3");
+        forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.wav");
+            if (forestMusicClip == null) forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.mp3");
         if (forestMusicClip != null) {
             StartScene.applyVolumeToClipForScene(forestMusicClip, true);
             forestMusicClip.loop(Clip.LOOP_CONTINUOUSLY);

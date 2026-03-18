@@ -27,6 +27,7 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
     private final Runnable onQuitToTitle;
 
     private Image bgCave;
+    private Image bgMap;
     private final Map<String, Image> princeImages = new HashMap<>();
     private final Map<String, Image> darabongbaImages = new HashMap<>();
     private final Map<String, Image> trollBossImages = new HashMap<>();
@@ -75,6 +76,8 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
     private void loadAllImages() {
         bgCave = ForestImageLoader.loadBackground("troll cave.png");
         if (bgCave == null) bgCave = ForestImageLoader.loadBackground("troll_cave.png");
+        bgMap = ForestImageLoader.loadBackground(ForestResources.BG_MAP);
+        if (bgMap == null) bgMap = ForestImageLoader.loadBackground("map1forest.jpg");
         loadPrince(ForestResources.PRINCE_DEFAULT);
         loadPrince(ForestResources.PRINCE_SURPRISE);
         loadPrince(ForestResources.PRINCE_ANNOYED);
@@ -238,13 +241,14 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
             return;
         }
 
-        if (bgCave != null) {
-            int iw = bgCave.getWidth(this), ih = bgCave.getHeight(this);
+        Image bg = (blockIndex == 1 && bgMap != null) ? bgMap : bgCave;
+        if (bg != null) {
+            int iw = bg.getWidth(this), ih = bg.getHeight(this);
             if (iw > 0 && ih > 0) {
                 double scale = Math.max((double) w / iw, (double) h / ih);
                 int sw = (int) Math.ceil(iw * scale), sh = (int) Math.ceil(ih * scale);
                 int x = (w - sw) / 2, y = (h - sh) / 2;
-                g2.drawImage(bgCave, x, y, sw, sh, this);
+                g2.drawImage(bg, x, y, sw, sh, this);
             }
         } else {
             g2.setColor(new Color(40, 30, 50));
@@ -395,7 +399,8 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
             try { if (postBattleMusicClip.isRunning()) postBattleMusicClip.stop(); postBattleMusicClip.close(); } catch (Exception ignore) {}
             postBattleMusicClip = null;
         }
-        postBattleMusicClip = StartScene.loadMusicFromMusicDir("trollcave.mp3");
+        postBattleMusicClip = StartScene.loadMusicFromMusicDir("trollcave.wav");
+        if (postBattleMusicClip == null) postBattleMusicClip = StartScene.loadMusicFromMusicDir("trollcave.mp3");
         if (postBattleMusicClip != null) {
             StartScene.applyVolumeToClipForScene(postBattleMusicClip, true);
             postBattleMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
