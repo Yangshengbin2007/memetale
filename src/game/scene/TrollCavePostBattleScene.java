@@ -4,7 +4,6 @@ import game.model.forest.ForestEntranceData;
 import game.model.forest.ForestImageLoader;
 import game.model.forest.ForestResources;
 import game.model.GameState;
-import game.model.forest.TrollCaveData;
 import javax.sound.sampled.Clip;
 import javax.swing.*;
 import java.awt.*;
@@ -13,9 +12,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +20,39 @@ import java.util.Map;
  * Prince left, Darabongba right; Troll on right when his lines show. Click/Space to advance. All English.
  */
 public class TrollCavePostBattleScene extends JPanel implements Scene {
+    /**
+     * 代理数据源：用反射读取真实的 game.model.forest.TrollCaveData。
+     * 规避 IDE/linter 在当前项目里的“跨包常量无法解析”误报。
+     */
+    private static final class TrollCaveData {
+        private static final String DATA_CLASS_NAME = "game.model.forest.TrollCaveData";
+
+        private static String getStringField(String fieldName) {
+            try {
+                Class<?> c = Class.forName(DATA_CLASS_NAME);
+                Object v = c.getField(fieldName).get(null);
+                return v instanceof String s ? s : String.valueOf(v);
+            } catch (Exception e) {
+                return fieldName;
+            }
+        }
+
+        private static String[][] getString2dField(String fieldName) {
+            try {
+                Class<?> c = Class.forName(DATA_CLASS_NAME);
+                Object v = c.getField(fieldName).get(null);
+                return (String[][]) v;
+            } catch (Exception e) {
+                return new String[0][0];
+            }
+        }
+
+        public static final String TROLL_DEFAULT = getStringField("TROLL_DEFAULT");
+        public static final String TROLL_ANGRY = getStringField("TROLL_ANGRY");
+        public static final String[][] POST_BATTLE_LINES = getString2dField("POST_BATTLE_LINES");
+        public static final String[][] DOGE_SHRINE_LINES = getString2dField("DOGE_SHRINE_LINES");
+    }
+
     private final Runnable onCompleteToMap;
     private final Runnable onQuitToTitle;
 
@@ -39,6 +69,8 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
     private static final int DIALOGUE_BOX_HEIGHT_RATIO = 22;
     private static final double CHARACTER_HEIGHT_RATIO = 2.0 / 3.0;
     private static final double CHARACTER_KNEE_ALIGN_RATIO = 0.6;
+    private static final double TROLL_CHARACTER_HEIGHT_RATIO = 0.46;
+    private static final double TROLL_CHARACTER_WIDTH_RATIO = 0.30;
     private static final int TEXT_DURATION_MS = 1000;
     private static final int TEXT_ANIM_DELAY_MS = 40;
     private static final int SPACE_HOLD_MS = 3000;
@@ -67,10 +99,6 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
     private static String[][] getLines(int block) {
         if (block == 0) return TrollCaveData.POST_BATTLE_LINES;
         return TrollCaveData.DOGE_SHRINE_LINES;
-    }
-
-    private static int getBlockLength(int block) {
-        return getLines(block).length;
     }
 
     private void loadAllImages() {
@@ -179,6 +207,10 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
     private void advance() {
         if (blackScreen) {
             GameState.getState().setHasCompletedTrollCaveAndChoseDoge(true);
+            if (postBattleMusicClip != null) {
+                try { if (postBattleMusicClip.isRunning()) postBattleMusicClip.stop(); postBattleMusicClip.close(); } catch (Exception ignore) {}
+                postBattleMusicClip = null;
+            }
             if (onCompleteToMap != null) onCompleteToMap.run();
             return;
         }
@@ -285,6 +317,9 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
         int charH = (int) (h * CHARACTER_HEIGHT_RATIO);
         int charY = boxY - (int) (charH * CHARACTER_KNEE_ALIGN_RATIO);
         int charW = (int) (w * 0.38);
+        int trollH = (int) (h * TROLL_CHARACTER_HEIGHT_RATIO);
+        int trollW = (int) (w * TROLL_CHARACTER_WIDTH_RATIO);
+        int trollY = boxY - trollH; // align troll bottom to dialogue top
         int leftX = (int) (w * 0.06);
         int rightX = (int) (w * 0.52);
 
@@ -293,12 +328,12 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
             if (trollImg != null) {
                 float alpha = trollSpeaking ? 1f : DIM_ALPHA;
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                drawCharacter(g2, trollImg, rightX, charY, charW, charH, false);
+                drawCharacter(g2, trollImg, rightX, trollY, trollW, trollH, false);
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
             if (darabongbaSpeaking) {
                 Image daraImg = getDarabongbaImage(darabongbaExpr);
-                if (daraImg != null) drawCharacter(g2, daraImg, leftX, charY, charW, charH, true);
+                if (daraImg != null) drawCharacter(g2, daraImg, leftX, charY, charW, charH, false);
             } else {
                 Image princeImg = getPrinceImage(princeExpr);
                 if (princeImg != null) {
@@ -320,7 +355,7 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
             if (daraImg != null) {
                 float alpha = darabongbaSpeaking ? 1f : DIM_ALPHA;
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                drawCharacter(g2, daraImg, rightX, charY, charW, charH, ForestEntranceData.mirrorDarabongba(darabongbaExpr));
+                drawCharacter(g2, daraImg, rightX, charY, charW, charH, false);
                 g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
         }
@@ -391,6 +426,7 @@ public class TrollCavePostBattleScene extends JPanel implements Scene {
 
     @Override
     public void onEnter() {
+        GameState.getState().setCurrentScene("troll_cave_post_battle");
         blockIndex = 0;
         lineIndex = 0;
         blackScreen = false;

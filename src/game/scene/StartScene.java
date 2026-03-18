@@ -498,6 +498,7 @@ public class StartScene extends JPanel implements Scene {
             st.setChapterOneDialogueIndex(0);
             st.setChapterOneHistory(new java.util.ArrayList<>());
             st.setSavedChapter(1);
+            st.setCurrentScene("chapter_one");
             state = State.START_GAME_FADEOUT;
             stateStart = System.currentTimeMillis();
             alphaStart = 1f;
@@ -1082,8 +1083,11 @@ public class StartScene extends JPanel implements Scene {
         ch1.addActionListener(ev -> {
             int c = JOptionPane.showConfirmDialog(dialog, "Are you sure? This may affect your game experience.", "Chapter One", JOptionPane.YES_NO_OPTION);
             if (c == JOptionPane.YES_OPTION) {
-                GameState.getState().setChapterOneDialogueIndex(ChapterOneData.LINES.length);
-                GameState.getState().setSavedChapter(1);
+                StoryState st = GameState.getState();
+                st.setChapterOneDialogueIndex(0);
+                st.setChapterOneHistory(new java.util.ArrayList<>());
+                st.setSavedChapter(1);
+                st.setCurrentScene("chapter_one");
                 dialog.dispose();
                 if (onStartGame != null) onStartGame.run();
             }
@@ -1141,8 +1145,11 @@ public class StartScene extends JPanel implements Scene {
         ch1.addActionListener(ev -> {
             int c = JOptionPane.showConfirmDialog(dialog, "Are you sure? This may affect your game experience.", "Chapter One", JOptionPane.YES_NO_OPTION);
             if (c == JOptionPane.YES_OPTION) {
-                GameState.getState().setChapterOneDialogueIndex(ChapterOneData.LINES.length);
-                GameState.getState().setSavedChapter(1);
+                StoryState st = GameState.getState();
+                st.setChapterOneDialogueIndex(0);
+                st.setChapterOneHistory(new java.util.ArrayList<>());
+                st.setSavedChapter(1);
+                st.setCurrentScene("chapter_one");
                 dialog.dispose();
                 if (onStartGame != null) onStartGame.run();
             }
@@ -1195,7 +1202,23 @@ public class StartScene extends JPanel implements Scene {
             GameState.setState(loaded);
             loadFadeActive = true;
             loadFadeStartTime = System.currentTimeMillis();
-            ChapterOneScene.setSkipQuoteNextEnter(true);
+            String sceneKey = loaded.getCurrentScene();
+            if (sceneKey == null || sceneKey.isEmpty()) {
+                if (loaded.getTrollCaveDialogueIndex() > 0 || !loaded.getTrollCaveHistory().isEmpty()) {
+                    sceneKey = "troll_cave";
+                } else if (loaded.hasCompletedTrollCaveAndChoseDoge()) {
+                    sceneKey = "forest_overworld_map";
+                } else if (loaded.getChapterOneDialogueIndex() >= ChapterOneData.LINES.length) {
+                    // Old saves without sceneKey: chapter one finished usually means forest start area.
+                    sceneKey = "forest_entrance";
+                } else {
+                    sceneKey = "chapter_one";
+                }
+                loaded.setCurrentScene(sceneKey);
+            }
+            if (sceneKey == null || sceneKey.isEmpty() || "chapter_one".equals(sceneKey)) {
+                ChapterOneScene.setSkipQuoteNextEnter(true);
+            }
             if (onStartGame != null)
                 onStartGame.run();
         } catch (Exception ex) {
@@ -1224,25 +1247,8 @@ public class StartScene extends JPanel implements Scene {
     /**
      * 播放一次 ding.wav 作为音量测试（使用当前 masterVolume）。
      */
-    private void playVolumeTestDing() {
-        try {
-            Clip clip = loadSoundClip(DING_SOUND_NAME);
-            if (clip == null) {
-                System.err.println("ding.wav not found for volume test.");
-                return;
-            }
-            applyVolumeToClip(clip);
-            Clip c = clip;
-            clip.addLineListener(event -> {
-                if (event.getType() == javax.sound.sampled.LineEvent.Type.STOP) {
-                    c.close();
-                }
-            });
-            clip.start();
-        } catch (Exception ex) {
-            System.err.println("Failed to play ding.wav: " + ex.getMessage());
-        }
-    }
+    // 注意：音量测试使用的是 static playVolumeTestDingAt(volume)。
+    // 该方法保留接口会造成“未使用”的诊断，因此移除本地实现。
 
     /** 播放按钮点击音效（开始游戏等），先试 click.wav，无则用 ding.wav */
     private void playClickSound() {

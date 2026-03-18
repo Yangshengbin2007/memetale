@@ -8,7 +8,6 @@ import game.model.DialogueRecord;
 import game.model.GameState;
 import game.model.StoryState;
 import game.io.SaveLoad;
-import game.scene.StartScene;
 
 import javax.sound.sampled.Clip;
 import javax.swing.*;
@@ -658,6 +657,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
     private void handleSave() {
         StoryState state = GameState.getState();
         state.setSavedChapter(1);
+        state.setCurrentScene("forest_entrance");
         int lastSlot = state.getLastUsedSaveSlot();
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Save (last used: Slot " + lastSlot + ")", Dialog.ModalityType.APPLICATION_MODAL);
         JPanel grid = new JPanel(new GridLayout(2, 4, 8, 8));
@@ -708,7 +708,21 @@ public class ForestEntranceScene extends JPanel implements Scene {
                     GameState.setState(loaded);
                     dialog.dispose();
                     pauseMenuVisible = false;
-                    if (onLoadSwitchToChapterOne != null) onLoadSwitchToChapterOne.run();
+                    String sceneKey = loaded.getCurrentScene();
+                    if ("troll_cave".equals(sceneKey)) {
+                        if (onLandmarkChosen != null) onLandmarkChosen.accept("troll_cave");
+                        else if (onEnterForest != null) onEnterForest.run();
+                    } else if ("forest_overworld_map".equals(sceneKey)) {
+                        if (onEnterForest != null) onEnterForest.run();
+                    } else if ("forest_entrance".equals(sceneKey)) {
+                        phase = PHASE_ENTRANCE_DIALOGUE;
+                        entranceLineIndex = 0;
+                        mapLineIndex = 0;
+                        lineStartTime = System.currentTimeMillis();
+                        repaint();
+                    } else {
+                        if (onLoadSwitchToChapterOne != null) onLoadSwitchToChapterOne.run();
+                    }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(ForestEntranceScene.this, "Load failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -912,6 +926,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
 
     @Override
     public void onEnter() {
+        GameState.getState().setCurrentScene("forest_entrance");
         lineStartTime = System.currentTimeMillis();
         if (forestMusicClip != null) {
             try { if (forestMusicClip.isRunning()) forestMusicClip.stop(); forestMusicClip.close(); } catch (Exception ignore) {}

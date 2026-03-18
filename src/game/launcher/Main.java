@@ -1,5 +1,7 @@
 package game.launcher;
 
+import game.model.GameState;
+import game.model.StoryState;
 import game.scene.*;
 import java.awt.*;
 import java.io.File;
@@ -95,7 +97,27 @@ public class Main {
 				ChapterOneScene.setSkipQuoteNextEnter(true);
 				sceneManager.setScene(chapterOne);
 			});
-			startScene.setOnStartGame(() -> sceneManager.setScene(chapterOne));
+			startScene.setOnStartGame(() -> {
+				StoryState st = GameState.getState();
+				String sceneKey = st == null ? null : st.getCurrentScene();
+				if ("forest_entrance".equals(sceneKey)) {
+					sceneManager.setScene(forestEntranceScene);
+					return;
+				}
+				if ("troll_cave".equals(sceneKey)) {
+					sceneManager.setScene(trollCaveScene);
+					return;
+				}
+				if ("forest_overworld_map".equals(sceneKey)) {
+					sceneManager.setScene(forestOverworldMapScene);
+					return;
+				}
+				if ("troll_cave_post_battle".equals(sceneKey)) {
+					sceneManager.setScene(trollCavePostBattleScene);
+					return;
+				}
+				sceneManager.setScene(chapterOne);
+			});
 			startScene.setOnMiniGames(() -> sceneManager.setScene(miniGameCollectionScene));
 
 			sceneManager.setScene(startScene);

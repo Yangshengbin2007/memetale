@@ -868,6 +868,7 @@ public class ChapterOneScene extends JPanel implements Scene {
     private void handleSave() {
         StoryState state = GameState.getState();
         state.setSavedChapter(1);
+        state.setCurrentScene("chapter_one");
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Save (last used: Slot " + lastUsedSaveSlot + ")", Dialog.ModalityType.APPLICATION_MODAL);
         JPanel grid = new JPanel(new GridLayout(2, 4, 8, 8));
         for (int i = 1; i <= 8; i++) {
@@ -1148,6 +1149,7 @@ public class ChapterOneScene extends JPanel implements Scene {
 
     @Override
     public void onEnter() {
+        GameState.getState().setCurrentScene("chapter_one");
         boolean skipIntro = skipQuoteNextEnter;
         if (skipQuoteNextEnter) skipQuoteNextEnter = false;
 

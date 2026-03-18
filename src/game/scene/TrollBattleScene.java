@@ -37,9 +37,16 @@ public class TrollBattleScene extends JPanel implements Scene {
     private static final int SHAKE_DURATION_MS = 200;
     private static final int GOLDEN_ITEM_SIZE = 20;
     private static final String[] TAUNTS = {
-        "Skill issue.", "Cope.", "Ratio.", "Touch grass.", "Your take is bad.",
-        "Cancelled.", "Uninstall.", "Cringe.", "Nobody asked.",
-        "Too slow.", "Got you in my sights.", "Heh.", "Nice try.", "Nope."
+        "Cute dodge. Do it again.",
+        "You call that movement?",
+        "You're one opinion away from disaster.",
+        "I have screenshots of this performance.",
+        "This is your final form?",
+        "I expected more from a protagonist.",
+        "You're dodging like a loading bar.",
+        "Try harder. I'm barely trying.",
+        "This timeline rejects your gameplay.",
+        "You look nervous. Good."
     };
     private static final String[] HIT_LINES = {
         "Got you!", "Heh. Cope.", "Too slow!", "That one counted.", "Ouch? No, you."
@@ -62,6 +69,7 @@ public class TrollBattleScene extends JPanel implements Scene {
     private String tauntText = "";
     private long tauntUntil;
     private boolean victory;
+    private boolean victoryAskReplay = false;
     private boolean goldenItemSpawned;
     private boolean goldenItemCaught;
     private final Random rnd = new Random();
@@ -75,15 +83,25 @@ public class TrollBattleScene extends JPanel implements Scene {
     private String topTrollState = "default";
     private long lastHitTime = 0;
     private long lastScaredTime = 0;
+    private long lastAngryTime = 0;
     private static final long SCARED_AFTER_NO_HIT_MS = 7000;
     private static final long SCARED_DURATION_MS = 4000;
+    private static final long ANGRY_DURATION_MS = 2200;
     private boolean wavesComplete = false;
     private long defeatReactionStart = -1;
     private static final int DEFEAT_REACTION_MS = 2200;
     private static final int ANGRY_REACTION_MS = 1500;
     private static final int PHASE3_SPAWN_MS = 20000;
-    private Image topTrollDefault, topTrollLaugh, topTrollScared, topTrollDefeat;
+    private boolean phase3SpawnStopped = false;
+    private Image topTrollDefault, topTrollLaugh, topTrollScared, topTrollDefeat, topTrollAngry;
     private final List<Image> bulletTrollImages = new ArrayList<>();
+
+    // Golden item rules (main story only, allowGoldenItem=true):
+    // - it spawns at a random phase, once per attempt
+    // - once caught, we mark it as "acquired" for the rest of this scene (until leaving/re-entering),
+    //   so it won't spawn again on subsequent retries/difficulty decreases.
+    private boolean goldenItemAcquired = false;
+    private int goldenSpawnPhase = -1;
     /** On death: show knight dialogue. 0 = ask lower difficulty, 1 = show taunt then skip. */
     private boolean dead;
     private int deathPhase;
@@ -113,8 +131,26 @@ public class TrollBattleScene extends JPanel implements Scene {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!dead || deathPhase != 0) return;
+                if (dead) {
+                    if (deathPhase != 0) return;
+                } else if (victoryAskReplay) {
+                    // fallthrough to handle replay choice
+                } else {
+                    return;
+                }
                 Point p = e.getPoint();
+                if (victoryAskReplay && !dead) {
+                    if (yesBounds.contains(p)) {
+                        victoryAskReplay = false;
+                        restartBattle(false);
+                    } else if (noBounds.contains(p)) {
+                        victoryAskReplay = false;
+                        if (onQuitToTitle != null) onQuitToTitle.run();
+                        else if (onVictory != null) onVictory.run();
+                    }
+                    return;
+                }
+
                 if (hellMode) {
                     if (yesBounds.contains(p)) {
                         restartBattle(false);
@@ -123,20 +159,32 @@ public class TrollBattleScene extends JPanel implements Scene {
                     }
                     return;
                 }
+
+                boolean isMainStory = allowGoldenItem;
+
                 if (yesBounds.contains(p)) {
-                    difficultyReductions++;
-                    if (difficultyReductions >= MAX_DIFFICULTY_REDUCTIONS) {
-                        deathPhase = 1;
-                        String taunt = LOWER_DIFFICULTY_TAUNTS[rnd.nextInt(LOWER_DIFFICULTY_TAUNTS.length)];
-                        dialogueText = "Darabongba: " + taunt;
-                        dialogueUntil = System.currentTimeMillis() + 3500;
-                        tauntShowUntil = System.currentTimeMillis() + 3200;
-                        repaint();
+                    if (isMainStory) {
+                        difficultyReductions++;
+                        if (difficultyReductions >= MAX_DIFFICULTY_REDUCTIONS) {
+                            deathPhase = 1;
+                            String taunt = LOWER_DIFFICULTY_TAUNTS[rnd.nextInt(LOWER_DIFFICULTY_TAUNTS.length)];
+                            dialogueText = "Darabongba: " + taunt;
+                            dialogueUntil = System.currentTimeMillis() + 3500;
+                            tauntShowUntil = System.currentTimeMillis() + 3200;
+                            repaint();
+                        } else {
+                            restartBattle(true);
+                        }
                     } else {
-                        restartBattle(true);
+                        // Minigame normal: no difficulty decrease; only retry.
+                        restartBattle(false);
                     }
                 } else if (noBounds.contains(p)) {
-                    restartBattle(false);
+                    if (isMainStory) {
+                        restartBattle(false);
+                    } else {
+                        if (onQuitToTitle != null) onQuitToTitle.run();
+                    }
                 }
             }
         });
@@ -187,6 +235,8 @@ public class TrollBattleScene extends JPanel implements Scene {
     public void onEnter() {
         dead = false;
         deathPhase = 0;
+        difficultyReductions = 0;
+        phase3SpawnStopped = false;
         updateBoxBounds();
         player.x = boxX + boxW / 2 - HEART_SIZE / 2;
         player.y = boxY + boxH / 2 - HEART_SIZE / 2;
@@ -196,6 +246,10 @@ public class TrollBattleScene extends JPanel implements Scene {
         bullets.clear();
         goldenItems.clear();
         victory = false;
+        victoryAskReplay = false;
+        phase3SpawnStopped = false;
+        goldenItemAcquired = false;
+        goldenSpawnPhase = allowGoldenItem && !hellMode ? (1 + rnd.nextInt(3)) : -1;
         goldenItemSpawned = false;
         goldenItemCaught = false;
         wavesComplete = false;
@@ -240,8 +294,15 @@ public class TrollBattleScene extends JPanel implements Scene {
         bullets.clear();
         goldenItems.clear();
         victory = false;
+        victoryAskReplay = false;
+        phase3SpawnStopped = false;
         goldenItemSpawned = false;
         goldenItemCaught = false;
+        if (allowGoldenItem && !hellMode && !goldenItemAcquired) {
+            goldenSpawnPhase = 1 + rnd.nextInt(3);
+        } else {
+            goldenSpawnPhase = -1;
+        }
         wavesComplete = false;
         defeatReactionStart = -1;
         topTrollState = "default";
@@ -262,6 +323,7 @@ public class TrollBattleScene extends JPanel implements Scene {
         topTrollDefault = ForestImageLoader.loadCharacter("troll_boss", "default");
         topTrollLaugh = ForestImageLoader.loadCharacter("troll_boss", "laugh");
         topTrollScared = ForestImageLoader.loadCharacter("troll_boss", "scared");
+        topTrollAngry = ForestImageLoader.loadCharacter("troll_boss", "angry");
         topTrollDefeat = ForestImageLoader.loadCharacter("troll_boss", "defeat");
         bulletTrollImages.clear();
         if (topTrollDefault != null) bulletTrollImages.add(topTrollDefault);
@@ -307,13 +369,33 @@ public class TrollBattleScene extends JPanel implements Scene {
     }
 
     private void showDialogue(String text) {
-        dialogueText = text;
+        if (text == null) text = "";
+        if (!text.isEmpty() && !text.contains(":")) {
+            dialogueText = "Troll Boss: " + text;
+        } else {
+            dialogueText = text;
+        }
         dialogueUntil = System.currentTimeMillis() + 4200;
     }
 
     private void showTaunt() {
-        tauntText = TAUNTS[rnd.nextInt(TAUNTS.length)];
+        tauntText = "Troll Boss: " + TAUNTS[rnd.nextInt(TAUNTS.length)];
         tauntUntil = System.currentTimeMillis() + 3800;
+        if (!victory && !dead) {
+            int roll = rnd.nextInt(100);
+            if (roll < 20) {
+                topTrollState = "laugh";
+                lastHitTime = System.currentTimeMillis();
+            } else if (roll < 30) {
+                topTrollState = "angry";
+                lastAngryTime = System.currentTimeMillis();
+            } else if (roll < 55) {
+                topTrollState = "scared";
+                lastScaredTime = System.currentTimeMillis();
+            } else {
+                topTrollState = "default";
+            }
+        }
     }
 
     private void tick() {
@@ -328,8 +410,13 @@ public class TrollBattleScene extends JPanel implements Scene {
         }
         if (victory) {
             if (defeatReactionStart >= 0 && (now - defeatReactionStart) > DEFEAT_REACTION_MS) {
-                if (gameTimer != null) gameTimer.stop();
-                if (onVictory != null) onVictory.run();
+                // Minigame normal: ask replay instead of immediately returning.
+                if (!hellMode && !allowGoldenItem) {
+                    victoryAskReplay = true;
+                } else {
+                    if (gameTimer != null) gameTimer.stop();
+                    if (onVictory != null) onVictory.run();
+                }
             }
             repaint();
             return;
@@ -337,6 +424,8 @@ public class TrollBattleScene extends JPanel implements Scene {
         if (topTrollState.equals("laugh") && (now - lastHitTime) > ANGRY_REACTION_MS)
             topTrollState = "default";
         if (topTrollState.equals("scared") && (now - lastScaredTime) > SCARED_DURATION_MS)
+            topTrollState = "default";
+        if (topTrollState.equals("angry") && (now - lastAngryTime) > ANGRY_DURATION_MS)
             topTrollState = "default";
         if (!victory && topTrollState.equals("default") && (now - lastHitTime) > SCARED_AFTER_NO_HIT_MS && bullets.size() < 15) {
             topTrollState = "scared";
@@ -354,7 +443,9 @@ public class TrollBattleScene extends JPanel implements Scene {
         if (right) player.x = Math.min(boxX + boxW - HEART_SIZE, player.x + 4);
 
         spawnBullets(now);
-        if (allowGoldenItem && !hellMode && phase == 3 && !goldenItemSpawned && waveInPhase >= 2) {
+        // Main story only: golden item appears randomly in phases until it is caught once.
+        if (allowGoldenItem && !hellMode && !goldenItemAcquired
+            && goldenSpawnPhase == phase && !goldenItemSpawned && waveInPhase >= 1) {
             spawnGoldenItem();
         }
 
@@ -392,13 +483,28 @@ public class TrollBattleScene extends JPanel implements Scene {
                 bullets.remove(i);
                 shakeUntil = now + SHAKE_DURATION_MS;
                 lastHitTime = now;
-                topTrollState = (rnd.nextInt(4) == 0) ? "laugh" : "default";
+                    // Expression distribution: fairly varied, angry slightly less.
+                    boolean lowHp = hp <= (hellMode ? MAX_HP_HELL : MAX_HP_NORMAL) / 3;
+                    int roll = rnd.nextInt(100);
+                    if (lowHp) {
+                        if (roll < 45) topTrollState = "default";
+                        else if (roll < 65) topTrollState = "laugh";
+                        else if (roll < 85) { topTrollState = "angry"; lastAngryTime = now; }
+                        else topTrollState = "scared";
+                    } else {
+                        if (roll < 60) topTrollState = "default";
+                        else if (roll < 80) topTrollState = "laugh";
+                        else if (roll < 90) topTrollState = "scared";
+                        else { topTrollState = "angry"; lastAngryTime = now; }
+                    }
                 if (hp <= 0) {
                     hp = 0;
                     dead = true;
                     deathPhase = 0;
                     if (knightImage == null) knightImage = ForestImageLoader.loadCharacter("darabongba", "default");
-                    if (gameTimer != null) gameTimer.stop();
+                    // Keep the timer running so the "death dialogue" can keep repainting.
+                    // (We stop bullet spawning because tick() returns early when dead==true.)
+                    repaint();
                     return;
                 }
                 showDialogue(HIT_LINES[rnd.nextInt(HIT_LINES.length)]);
@@ -411,6 +517,7 @@ public class TrollBattleScene extends JPanel implements Scene {
             g.y += g.vy;
             if (intersects(player.x, player.y, HEART_SIZE, HEART_SIZE, (int)g.x, (int)g.y, GOLDEN_ITEM_SIZE, GOLDEN_ITEM_SIZE)) {
                 goldenItemCaught = true;
+                goldenItemAcquired = true;
                 goldenItems.remove(i);
             } else if (g.x < boxX - 50 || g.x > boxX + boxW + 50) {
                 goldenItems.remove(i);
@@ -437,7 +544,8 @@ public class TrollBattleScene extends JPanel implements Scene {
 
     private int reducedCount(int base) {
         if (difficultyReductions <= 0) return base;
-        double scale = Math.max(0.15, 1.0 - 0.09 * difficultyReductions);
+        // Each "lower difficulty" confirmation reduces bullet count by ~10%.
+        double scale = Math.max(0.15, 1.0 - 0.10 * difficultyReductions);
         return Math.max(1, (int)(base * scale));
     }
 
@@ -664,10 +772,15 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
             }
         } else if (phase == 3) {
+            if (!hellMode && !phase3SpawnStopped && elapsed >= PHASE3_SPAWN_MS) {
+                phase3SpawnStopped = true;
+                showDialogue("No more opinions.");
+            }
+            boolean canSpawnPhase3 = hellMode || (!phase3SpawnStopped && elapsed < PHASE3_SPAWN_MS);
             if (waveInPhase == 0) {
                 currentBoxScale = NORMAL_BOX_SCALE - (float)((elapsed / 2000.0) * (NORMAL_BOX_SCALE - SHRINK_BOX_SCALE));
                 if (currentBoxScale < SHRINK_BOX_SCALE) currentBoxScale = SHRINK_BOX_SCALE;
-                if (elapsed > 500 && (int)(elapsed / 1000) > (int)((elapsed - TICK_MS) / 1000)) {
+                if (canSpawnPhase3 && elapsed > 500 && (int)(elapsed / 1000) > (int)((elapsed - TICK_MS) / 1000)) {
                     Bullet b = new Bullet();
                     b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
                     b.y = boxY - BULLET_SIZE;
@@ -681,7 +794,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
                 if (elapsed > 2500) { waveInPhase = 1; showDialogue("Let's make this… tighter."); }
             }
-            if (waveInPhase == 1 && elapsed <= PHASE3_SPAWN_MS) {
+            if (waveInPhase == 1 && canSpawnPhase3) {
                 if ((int)(elapsed / 1100) > (int)((elapsed - TICK_MS) / 1100) && elapsed > 3500) {
                     int cx = boxX + boxW / 2 - BULLET_SIZE / 2;
                     int cy = boxY + boxH / 2 - BULLET_SIZE / 2;
@@ -696,7 +809,8 @@ public class TrollBattleScene extends JPanel implements Scene {
                         double spd = hellMode ? 2.4 : 2.2;
                         b.vx = (float)(Math.cos(a) * spd);
                         b.vy = (float)(Math.sin(a) * spd);
-                        b.bounce = true;
+                        // Phase 3 should clear naturally; no bouncing bullets here.
+                        b.bounce = false;
                         b.text = "";
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                         bullets.add(b);
@@ -704,7 +818,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
                 if (elapsed > 6500) { waveInPhase = 2; showDialogue("Final verdict."); }
             }
-            if (waveInPhase == 2 && elapsed <= PHASE3_SPAWN_MS) {
+            if (waveInPhase == 2 && canSpawnPhase3) {
                 if ((int)(elapsed / 500) > (int)((elapsed - TICK_MS) / 500) && elapsed > 7000) {
                     boolean leftToRight = rnd.nextBoolean();
                     int gap = hellMode ? 48 : 58;
@@ -727,7 +841,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                     }
                 }
             }
-            if (hellMode && phase == 3 && elapsed <= PHASE3_SPAWN_MS && elapsed > 3000) {
+            if (hellMode && phase == 3 && elapsed > 3000) {
                 if ((int)(elapsed / 3500) > (int)((elapsed - TICK_MS) / 3500)) {
                     float cx = boxX + boxW / 2f;
                     float cy = boxY + boxH / 2f;
@@ -784,16 +898,20 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
             }
         }
-        if (wavesComplete && bullets.isEmpty() && !victory) {
+        // Normal/story completion:
+        // - stop spawning after phase3 (20s)
+        // - then wait until all bullets are gone
+        // - only then let the trollface say "I lost" and proceed
+        if (!hellMode && wavesComplete && phase3SpawnStopped && bullets.isEmpty() && !victory) {
             victory = true;
             defeatReactionStart = now;
             topTrollState = "defeat";
-            showDialogue(hellMode ? "You survived the judgment." : "You survived.");
+            showDialogue("I lost.");
         }
     }
 
     private void advancePhaseAndWaves(long now) {
-        if (now > tauntUntil && now > dialogueUntil && now - lastPeriodicDialogueTime > 2000 && rnd.nextInt(8) == 0) {
+        if (now > tauntUntil && now > dialogueUntil && now - lastPeriodicDialogueTime > 2000 && rnd.nextInt(4) == 0) {
             lastPeriodicDialogueTime = now;
             showTaunt();
         }
@@ -818,11 +936,19 @@ public class TrollBattleScene extends JPanel implements Scene {
             g2.fillRect(0, 0, w, h);
             String msg;
             if (hellMode) {
-                msg = deathPhase == 0 ? "Want to retry?" : (dialogueText != null ? dialogueText : "");
+                long seconds = Math.max(0, (now - battleStartTime) / 1000);
+                msg = deathPhase == 0 ? ("You survived " + seconds + "s. Want to retry?") : (dialogueText != null ? dialogueText : "");
             } else {
-                msg = deathPhase == 0
-                    ? "Darabongba: You got cancelled. Want to lower the difficulty?"
-                    : (dialogueText != null ? dialogueText : "");
+                if (allowGoldenItem) {
+                    msg = deathPhase == 0
+                        ? "Darabongba: You got cancelled. Lower difficulty by 10% and retry?"
+                        : (dialogueText != null ? dialogueText : "");
+                } else {
+                    // Minigame normal: no difficulty reduction.
+                    msg = deathPhase == 0
+                        ? "Darabongba: You got cancelled. Retry?"
+                        : (dialogueText != null ? dialogueText : "");
+                }
             }
             int boxW2 = Math.min(500, w - 80);
             int boxX2 = (w - boxW2) / 2;
@@ -848,21 +974,81 @@ public class TrollBattleScene extends JPanel implements Scene {
             }
             g2.drawString(msg, boxX2 + (boxW2 - Math.min(fm.stringWidth(msg), boxW2 - 24)) / 2, boxY2 + 28);
             if (deathPhase == 0) {
-                int btnW = 100;
+                int btnW = 110;
                 int btnH = 36;
                 int by = boxY2 + boxH2 - btnH - 16;
-                yesBounds.setBounds(boxX2 + boxW2 / 2 - btnW - 12, by, btnW, btnH);
-                noBounds.setBounds(boxX2 + boxW2 / 2 + 12, by, btnW, btnH);
-                g2.setColor(new Color(50, 90, 50));
-                g2.fillRoundRect(yesBounds.x, yesBounds.y, btnW, btnH, 8, 8);
-                g2.setColor(new Color(90, 50, 50));
-                g2.fillRoundRect(noBounds.x, noBounds.y, btnW, btnH, 8, 8);
-                g2.setColor(new Color(220, 220, 200));
-                g2.setFont(g2.getFont().deriveFont(Font.BOLD, 14f));
-                fm = g2.getFontMetrics();
-                g2.drawString("Yes", yesBounds.x + (btnW - fm.stringWidth("Yes")) / 2, yesBounds.y + (btnH + fm.getAscent()) / 2 - 2);
-                g2.drawString("No", noBounds.x + (btnW - fm.stringWidth("No")) / 2, noBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+
+                boolean minigameNormal = (!hellMode && !allowGoldenItem);
+                if (minigameNormal) {
+                    yesBounds.setBounds(boxX2 + (boxW2 - btnW) / 2, by, btnW, btnH);
+                    noBounds.setBounds(-9999, -9999, 1, 1);
+                    g2.setColor(new Color(50, 90, 50));
+                    g2.fillRoundRect(yesBounds.x, yesBounds.y, btnW, btnH, 8, 8);
+                    g2.setColor(new Color(220, 220, 200));
+                    g2.setFont(g2.getFont().deriveFont(Font.BOLD, 14f));
+                    fm = g2.getFontMetrics();
+                    g2.drawString("Yes", yesBounds.x + (btnW - fm.stringWidth("Yes")) / 2, yesBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+                } else {
+                    yesBounds.setBounds(boxX2 + boxW2 / 2 - btnW - 12, by, btnW, btnH);
+                    noBounds.setBounds(boxX2 + boxW2 / 2 + 12, by, btnW, btnH);
+                    g2.setColor(new Color(50, 90, 50));
+                    g2.fillRoundRect(yesBounds.x, yesBounds.y, btnW, btnH, 8, 8);
+                    g2.setColor(new Color(90, 50, 50));
+                    g2.fillRoundRect(noBounds.x, noBounds.y, btnW, btnH, 8, 8);
+                    g2.setColor(new Color(220, 220, 200));
+                    g2.setFont(g2.getFont().deriveFont(Font.BOLD, 14f));
+                    fm = g2.getFontMetrics();
+                    g2.drawString("Yes", yesBounds.x + (btnW - fm.stringWidth("Yes")) / 2, yesBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+                    g2.drawString("No", noBounds.x + (btnW - fm.stringWidth("No")) / 2, noBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+                }
             }
+            g2.dispose();
+            return;
+        }
+
+        if (victoryAskReplay) {
+            g2.setColor(new Color(0, 0, 0, 220));
+            g2.fillRect(0, 0, w, h);
+
+            int boxW2 = Math.min(520, w - 80);
+            int boxX2 = (w - boxW2) / 2;
+            int boxH2 = 160;
+            int boxY2 = h / 2 - boxH2 / 2;
+
+            // Center message box
+            g2.setColor(new Color(30, 25, 40));
+            g2.fillRoundRect(boxX2, boxY2, boxW2, boxH2, 12, 12);
+            g2.setColor(new Color(180, 140, 60));
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawRoundRect(boxX2, boxY2, boxW2, boxH2, 12, 12);
+
+            g2.setColor(new Color(245, 240, 230));
+            g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 16f));
+            FontMetrics fm = g2.getFontMetrics();
+            String lostLine = (dialogueText != null && !dialogueText.isEmpty()) ? dialogueText : "I lost.";
+            String askLine = "Want to try again?";
+            int tw = fm.stringWidth(lostLine);
+            g2.drawString(lostLine, boxX2 + (boxW2 - tw) / 2, boxY2 + 48);
+            tw = fm.stringWidth(askLine);
+            g2.drawString(askLine, boxX2 + (boxW2 - tw) / 2, boxY2 + 78);
+
+            int btnW = 110;
+            int btnH = 38;
+            int by = boxY2 + boxH2 - btnH - 16;
+            yesBounds.setBounds(boxX2 + boxW2 / 2 - btnW - 16, by, btnW, btnH);
+            noBounds.setBounds(boxX2 + boxW2 / 2 + 16, by, btnW, btnH);
+
+            g2.setColor(new Color(50, 90, 50));
+            g2.fillRoundRect(yesBounds.x, yesBounds.y, btnW, btnH, 8, 8);
+            g2.setColor(new Color(90, 50, 50));
+            g2.fillRoundRect(noBounds.x, noBounds.y, btnW, btnH, 8, 8);
+
+            g2.setColor(new Color(220, 220, 200));
+            g2.setFont(g2.getFont().deriveFont(Font.BOLD, 14f));
+            fm = g2.getFontMetrics();
+            g2.drawString("Yes", yesBounds.x + (btnW - fm.stringWidth("Yes")) / 2, yesBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+            g2.drawString("No", noBounds.x + (btnW - fm.stringWidth("No")) / 2, noBounds.y + (btnH + fm.getAscent()) / 2 - 2);
+
             g2.dispose();
             return;
         }
@@ -870,13 +1056,28 @@ public class TrollBattleScene extends JPanel implements Scene {
         updateBoxBounds();
         int topTrollY = boxY - 52;
         int topTrollSize = 48;
+        int topMoveX = 0;
+        int topMoveY = 0;
+        if ("laugh".equals(topTrollState)) {
+            topMoveX = (int) (Math.sin(now / 90.0) * 4);
+            topMoveY = (int) (Math.cos(now / 120.0) * 2);
+        } else if ("scared".equals(topTrollState)) {
+            topMoveY = (int) (Math.sin(now / 70.0) * 3);
+        } else if ("angry".equals(topTrollState)) {
+            topMoveX = (int) (Math.sin(now / 45.0) * 6);
+            topMoveY = (int) (Math.cos(now / 60.0) * 2);
+        } else if ("default".equals(topTrollState)) {
+            topMoveY = (int) (Math.sin(now / 140.0) * 2);
+        }
         Image topImg = topTrollDefault;
         if ("defeat".equals(topTrollState)) topImg = topTrollDefeat;
         else if ("laugh".equals(topTrollState)) topImg = topTrollLaugh;
         else if ("scared".equals(topTrollState)) topImg = topTrollScared;
+        else if ("angry".equals(topTrollState)) topImg = topTrollAngry;
         if (topImg != null) {
-            int tx = boxX + (boxW - topTrollSize) / 2;
-            g2.drawImage(topImg, tx, topTrollY, topTrollSize, topTrollSize, this);
+            int tx = boxX + (boxW - topTrollSize) / 2 + topMoveX;
+            int ty = topTrollY + topMoveY;
+            g2.drawImage(topImg, tx, ty, topTrollSize, topTrollSize, this);
         }
 
         boolean dialogueActive = now < dialogueUntil && dialogueText != null && !dialogueText.isEmpty();

@@ -38,7 +38,14 @@ echo ""
 
 # Compile the game (use same Java version for compile and run)
 echo "Compiling Java files..."
-javac -encoding UTF-8 -d out -sourcepath src src/game/launcher/Main.java
+JAVAC_BIN="${JAVA_HOME:-}/bin/javac"
+if [ -x "$JAVAC_BIN" ]; then
+    "$JAVAC_BIN" -encoding UTF-8 --release 18 -d out -sourcepath src \
+        src/game/launcher/Main.java src/game/model/forest/TrollCaveData.java
+else
+    javac -encoding UTF-8 --release 18 -d out -sourcepath src \
+        src/game/launcher/Main.java src/game/model/forest/TrollCaveData.java
+fi
 if [ $? -ne 0 ]; then
     echo ""
     echo "❌ Compilation failed!"
@@ -53,7 +60,12 @@ echo "Starting game..."
 echo ""
 
 # Run the game (use same Java version)
-java -cp out game.launcher.Main
+JAVA_BIN="${JAVA_HOME:-}/bin/java"
+if [ -x "$JAVA_BIN" ]; then
+    "$JAVA_BIN" -cp out game.launcher.Main
+else
+    java -cp out game.launcher.Main
+fi
 EXIT_CODE=$?
 
 echo ""

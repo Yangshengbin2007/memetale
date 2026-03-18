@@ -25,11 +25,13 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
     private static final int PHASE_BEEN_THERE_MSG = 1;
     private static final int PHASE_GOING_MSG = 2;
     private static final int PHASE_BLACK = 3;
+    private static final int PHASE_WRONG_MSG = 4;
     private int mapPhase = PHASE_NORMAL;
     private String goingToMessage = "";
     private Landmark pendingDestination = null;
     private static final long MESSAGE_DURATION_MS = 2500;
     private long messageStartTime = 0;
+    private Image knightImage;
 
     public static final class Landmark {
         public final String id;
@@ -78,6 +80,9 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
 
     private void loadImage() {
         mapImage = ForestImageLoader.loadBackground(ForestResources.BG_MAP);
+        knightImage = ForestImageLoader.loadCharacter("darabongba", "resentment");
+        if (knightImage == null) knightImage = ForestImageLoader.loadCharacter("darabongba", ForestResources.DARABONGBA_RESENTMENT);
+        if (knightImage == null) knightImage = ForestImageLoader.loadCharacter("darabongba", ForestResources.DARABONGBA_DEFAULT);
     }
 
     private void initMouse() {
@@ -108,19 +113,39 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
                     repaint();
                     return;
                 }
-                if (hoverLandmark == null) return;
+                if (mapPhase == PHASE_WRONG_MSG) {
+                    mapPhase = PHASE_NORMAL;
+                    repaint();
+                    return;
+                }
                 boolean completedTrollAndDoge = GameState.getState().hasCompletedTrollCaveAndChoseDoge();
+                if (hoverLandmark == null) {
+                    if (completedTrollAndDoge) {
+                        goingToMessage = "Darabongba: Wrong place. We are going to Doge Shrine.";
+                        mapPhase = PHASE_WRONG_MSG;
+                        messageStartTime = System.currentTimeMillis();
+                        repaint();
+                    }
+                    return;
+                }
                 if (completedTrollAndDoge && "troll_cave".equals(hoverLandmark.id)) {
-                    goingToMessage = "We've been there.";
-                    mapPhase = PHASE_BEEN_THERE_MSG;
+                    goingToMessage = "Darabongba: We've been there. Next stop: Doge Shrine.";
+                    mapPhase = PHASE_WRONG_MSG;
                     messageStartTime = System.currentTimeMillis();
                     repaint();
                     return;
                 }
                 if (completedTrollAndDoge) {
-                    goingToMessage = "We're going to " + hoverLandmark.displayName + ".";
-                    pendingDestination = hoverLandmark;
-                    mapPhase = PHASE_GOING_MSG;
+                    if ("doge_shrine".equals(hoverLandmark.id)) {
+                        goingToMessage = "We're going to Doge Shrine.";
+                        pendingDestination = hoverLandmark;
+                        mapPhase = PHASE_BLACK; // click Doge -> directly black
+                        messageStartTime = System.currentTimeMillis();
+                        repaint();
+                        return;
+                    }
+                    goingToMessage = "Darabongba: Wrong place. We are going to Doge Shrine.";
+                    mapPhase = PHASE_WRONG_MSG;
                     messageStartTime = System.currentTimeMillis();
                     repaint();
                     return;
@@ -219,7 +244,11 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
             g2.drawString(name, r.x + (r.width - fm.stringWidth(name)) / 2, r.y + (r.height + fm.getAscent()) / 2 - 2);
         }
 
-        if (mapPhase == PHASE_BEEN_THERE_MSG || mapPhase == PHASE_GOING_MSG) {
+        if (mapPhase == PHASE_WRONG_MSG) {
+            drawWrongDestinationDialogue(g2, w, h, goingToMessage == null || goingToMessage.isEmpty()
+                ? "Darabongba: Wrong place. We are going to Doge Shrine."
+                : goingToMessage);
+        } else if (mapPhase == PHASE_BEEN_THERE_MSG || mapPhase == PHASE_GOING_MSG) {
             if (System.currentTimeMillis() - messageStartTime > MESSAGE_DURATION_MS && mapPhase == PHASE_BEEN_THERE_MSG)
                 mapPhase = PHASE_NORMAL;
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f));
@@ -244,8 +273,49 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
         g2.dispose();
     }
 
+    /** Wrong landmark reminder: knight-only style similar to entrance wrong-click dialogue. */
+    private void drawWrongDestinationDialogue(Graphics2D g2, int w, int h, String msg) {
+        int boxH = (int) (h * 0.22);
+        int boxY = h - boxH;
+        int charH = (int) (h * 0.60);
+        int charY = boxY - charH;
+        int charW = (int) (w * 0.36);
+        int rightX = (int) (w * 0.52);
+        if (knightImage != null) {
+            int iw = knightImage.getWidth(this), ih = knightImage.getHeight(this);
+            if (iw > 0 && ih > 0) {
+                double scale = Math.min((double) charW / iw, (double) charH / ih);
+                int sw = (int) (iw * scale), sh = (int) (ih * scale);
+                int sx = rightX + (charW - sw) / 2;
+                int sy = charY + charH - sh;
+                g2.drawImage(knightImage, sx, sy, sw, sh, this);
+            }
+        }
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.92f));
+        g2.setColor(new Color(20, 20, 30));
+        g2.fillRoundRect(0, boxY - 8, w, boxH + 16, 14, 14);
+        g2.setStroke(new BasicStroke(2f));
+        g2.setColor(new Color(200, 160, 60));
+        g2.drawRoundRect(2, boxY - 6, w - 4, boxH + 12, 14, 14);
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+
+        int pad = 16;
+        int y = boxY + pad;
+        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 18f));
+        g2.setColor(new Color(220, 180, 80));
+        g2.drawString("Darabongba", pad, y + g2.getFontMetrics().getAscent());
+        y += 26;
+        g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 16f));
+        g2.setColor(new Color(240, 240, 235));
+        g2.drawString(msg, pad, y + g2.getFontMetrics().getAscent());
+        g2.setColor(new Color(120, 120, 120));
+        g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 12f));
+        g2.drawString("Click to close", w - 100, h - 12);
+    }
+
     @Override
     public void onEnter() {
+        GameState.getState().setCurrentScene("forest_overworld_map");
         mapPhase = PHASE_NORMAL;
         pendingDestination = null;
         if (mapMusicClip != null) {
