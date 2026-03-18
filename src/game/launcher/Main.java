@@ -34,10 +34,19 @@ public class Main {
 
 			sceneManager = new SceneManager(frame);
 			StartScene startScene = new StartScene();
-			MiniGameCollectionScene miniGameCollectionScene = new MiniGameCollectionScene(() -> {
-				startScene.setSkipJerryNextEnter(true);
-				sceneManager.setScene(startScene);
-			});
+			MiniGameCollectionScene miniGameCollectionScene = new MiniGameCollectionScene(
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				});
+			TrollBattleScene trollBattleMinigameNormal = new TrollBattleScene(false,
+				() -> sceneManager.setScene(miniGameCollectionScene),
+				() -> sceneManager.setScene(miniGameCollectionScene));
+			TrollBattleScene trollBattleMinigameHell = new TrollBattleScene(true,
+				() -> sceneManager.setScene(miniGameCollectionScene),
+				() -> sceneManager.setScene(miniGameCollectionScene));
+			miniGameCollectionScene.setLaunchTrollBattle(() -> sceneManager.setScene(trollBattleMinigameNormal),
+				() -> sceneManager.setScene(trollBattleMinigameHell));
 			ForestOverworldMapScene forestOverworldMapScene = new ForestOverworldMapScene(sceneManager);
 			ForestEntranceScene forestEntranceScene = new ForestEntranceScene(
 				() -> sceneManager.setScene(forestOverworldMapScene),
@@ -46,6 +55,35 @@ public class Main {
 					sceneManager.setScene(startScene);
 				}
 			);
+			TrollCavePostBattleScene trollCavePostBattleScene = new TrollCavePostBattleScene(
+				() -> sceneManager.setScene(forestOverworldMapScene),
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				}
+			);
+			TrollBattleScene trollBattleScene = new TrollBattleScene(
+				false,
+				() -> sceneManager.setScene(trollCavePostBattleScene),
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				}
+			);
+			TrollCaveScene trollCaveScene = new TrollCaveScene(
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.setScene(startScene);
+				},
+				() -> sceneManager.setScene(trollBattleScene)
+			);
+			forestEntranceScene.setOnLandmarkChosen(landmarkId -> {
+				if ("troll_cave".equals(landmarkId)) {
+					sceneManager.setScene(trollCaveScene);
+				} else {
+					sceneManager.setScene(forestOverworldMapScene);
+				}
+			});
 			ChapterOneScene chapterOne = new ChapterOneScene(
 				() -> {
 					startScene.setSkipJerryNextEnter(true);

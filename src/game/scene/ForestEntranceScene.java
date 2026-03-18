@@ -10,6 +10,7 @@ import game.model.StoryState;
 import game.io.SaveLoad;
 import game.scene.StartScene;
 
+import javax.sound.sampled.Clip;
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
@@ -35,6 +36,8 @@ public class ForestEntranceScene extends JPanel implements Scene {
     private static final int PHASE_BLACK_SCREEN = 3;
 
     private final Runnable onEnterForest;
+    /** When set, called with chosenLandmarkId on Continue; else onEnterForest.run() */
+    private java.util.function.Consumer<String> onLandmarkChosen;
 
     private Image bgEntrance;
     private Image bgMap;
@@ -48,8 +51,10 @@ public class ForestEntranceScene extends JPanel implements Scene {
 
     private static final float DIM_ALPHA = 0.45f;
     private static final int DIALOGUE_BOX_HEIGHT_RATIO = 22;
-    /** 立绘高度为屏高 2/3，底部齐对话框顶 */
+    /** 立绘高度为屏高 2/3，膝盖与对话框顶对齐（约 60% 高度在框上方） */
     private static final double CHARACTER_HEIGHT_RATIO = 2.0 / 3.0;
+    /** 立绘底部相对对话框顶的下移比例，0.6 表示膝盖约齐对话框顶 */
+    private static final double CHARACTER_KNEE_ALIGN_RATIO = 0.6;
     private static final int TEXT_DURATION_MS = 1000;
     private static final int TEXT_ANIM_DELAY_MS = 40;
     private static final int SPACE_HOLD_MS = 3000;
@@ -84,6 +89,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
 
     /** 点错地标时显示骑士单独台词，不弹窗；非 null 时在选点界面显示一句对话，点击后清除 */
     private String wrongDestinationMessage = null;
+    private Clip forestMusicClip;
 
     public ForestEntranceScene(Runnable onEnterForest) {
         this(onEnterForest, null);
@@ -104,6 +110,10 @@ public class ForestEntranceScene extends JPanel implements Scene {
 
     public void setOnLoadSwitchToChapterOne(Runnable r) {
         onLoadSwitchToChapterOne = r;
+    }
+
+    public void setOnLandmarkChosen(java.util.function.Consumer<String> c) {
+        onLandmarkChosen = c;
     }
 
     private void initSpaceTimers() {
@@ -342,8 +352,12 @@ public class ForestEntranceScene extends JPanel implements Scene {
                     }
                     return;
                 }
-                if (phase == PHASE_BLACK_SCREEN && continueBounds.contains(p) && onEnterForest != null) {
-                    onEnterForest.run();
+                if (phase == PHASE_BLACK_SCREEN && continueBounds.contains(p)) {
+                    if (onLandmarkChosen != null && chosenLandmarkId != null) {
+                        onLandmarkChosen.accept(chosenLandmarkId);
+                    } else if (onEnterForest != null) {
+                        onEnterForest.run();
+                    }
                 }
             }
 
@@ -467,7 +481,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         int boxH = h * DIALOGUE_BOX_HEIGHT_RATIO / 100;
         int boxY = h - boxH;
         int charH = (int) (h * CHARACTER_HEIGHT_RATIO);
-        int charY = boxY - charH;
+        int charY = boxY - (int) (charH * CHARACTER_KNEE_ALIGN_RATIO);
 
         int charW = (int) (w * 0.38);
         int leftX = (int) (w * 0.06);
@@ -699,6 +713,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
             StartScene.setMasterVolume(slider.getValue() / 100f);
             StartScene.setMuteAllMusic(muteMusicCheck.isSelected());
             StartScene.setMuteAllSoundEffects(muteSfxCheck.isSelected());
+            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
             d.dispose();
         });
         JLabel volLabel = new JLabel("Sound Volume");
@@ -842,6 +857,16 @@ public class ForestEntranceScene extends JPanel implements Scene {
     @Override
     public void onEnter() {
         lineStartTime = System.currentTimeMillis();
+        if (forestMusicClip != null) {
+            try { if (forestMusicClip.isRunning()) forestMusicClip.stop(); forestMusicClip.close(); } catch (Exception ignore) {}
+            forestMusicClip = null;
+        }
+        forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.mp3");
+        if (forestMusicClip != null) {
+            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
+            forestMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            forestMusicClip.start();
+        }
         requestFocusInWindow();
     }
 
@@ -850,7 +875,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         int boxH = h * DIALOGUE_BOX_HEIGHT_RATIO / 100;
         int boxY = h - boxH;
         int charH = (int) (h * CHARACTER_HEIGHT_RATIO);
-        int charY = boxY - charH;
+        int charY = boxY - (int) (charH * CHARACTER_KNEE_ALIGN_RATIO);
         int rightX = (int) (w * 0.52);
         int charW = (int) (w * 0.38);
         Image daraImg = getDarabongbaImage(ForestEntranceData.EXPR_RESENTMENT);
@@ -880,7 +905,12 @@ public class ForestEntranceScene extends JPanel implements Scene {
     }
 
     @Override
-    public void onExit() {}
+    public void onExit() {
+        if (forestMusicClip != null) {
+            try { if (forestMusicClip.isRunning()) forestMusicClip.stop(); forestMusicClip.close(); } catch (Exception ignore) {}
+            forestMusicClip = null;
+        }
+    }
 
     @Override
     public JPanel getPanel() {

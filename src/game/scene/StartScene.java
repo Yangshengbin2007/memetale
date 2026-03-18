@@ -948,6 +948,61 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
+     * Apply current master volume and mute to a clip from any scene (Settings/menu volume).
+     * Call after loading and when user applies Settings.
+     */
+    public static void applyVolumeToClipForScene(Clip clip, boolean isMusic) {
+        applyVolumeToClipForScene(clip, isMusic, 1f);
+    }
+
+    /**
+     * Same as above with a volume scale (0..1]. When scale < 1 the clip is quieter.
+     * When master volume is below 0.5 (50%), effective volume is forced to 0 (for subtle ambience that disappears at low volume).
+     */
+    public static void applyVolumeToClipForScene(Clip clip, boolean isMusic, float volumeScale) {
+        if (clip == null) return;
+        float base = masterVolumeStatic * (isMusic ? (muteAllMusicStatic ? 0f : 1f) : (muteAllSoundEffectsStatic ? 0f : 1f));
+        float effective = (base < 0.5f) ? 0f : (base * Math.max(0f, Math.min(1f, volumeScale)));
+        try {
+            if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                float v = Math.max(0f, Math.min(1f, effective));
+                if (v == 0f) gain.setValue(gain.getMinimum());
+                else {
+                    float dB = (float) (20.0 * Math.log10(v));
+                    dB = Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), dB));
+                    gain.setValue(dB);
+                }
+            }
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Load a music clip from music/ (classpath /music/ or file music/). Tries fileName as-is then .wav.
+     * For use by other scenes. Caller must loop and start; apply volume with applyVolumeToClipForScene.
+     */
+    public static Clip loadMusicFromMusicDir(String fileName) {
+        String[] names = fileName.contains(".") ? new String[]{fileName} : new String[]{fileName + ".mp3", fileName + ".wav"};
+        for (String name : names) {
+            try {
+                URL url = StartScene.class.getResource("/music/" + name);
+                AudioInputStream ais = null;
+                if (url != null) ais = AudioSystem.getAudioInputStream(url);
+                if (ais == null) {
+                    File f = new File("music/" + name);
+                    if (f.exists()) ais = AudioSystem.getAudioInputStream(f);
+                }
+                if (ais != null) {
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(ais);
+                    return clip;
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
+    /**
      * 将当前音量与静音设置应用到所有已存在的声音资源。
      */
     private void updateAllVolumes() {

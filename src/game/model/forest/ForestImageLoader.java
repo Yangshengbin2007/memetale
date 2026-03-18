@@ -83,6 +83,34 @@ public final class ForestImageLoader {
                 Image img = fromFile("Stickers/people/Dala Bengba/happy.png");
                 if (img != null) return img;
             }
+        } else if ("troll_boss".equalsIgnoreCase(character)) {
+            // Actual assets: Stickers/people/Troll face/Trollface (1).png, angry (1).png
+            String trollFaceDir = "Stickers/people/Troll face/";
+            String defaultFn = "Trollface (1).png";
+            String angryFn = "angry (1).png";
+            if ("default".equals(expr)) {
+                Image img = fromFile(trollFaceDir + defaultFn);
+                if (img != null) return img;
+                img = fromClasspath("/Stickers/people/Troll%20face/" + defaultFn.replace(" ", "%20"));
+                if (img != null) return img;
+            } else if ("angry".equals(expr)) {
+                Image img = fromFile(trollFaceDir + angryFn);
+                if (img != null) return img;
+                img = fromClasspath("/Stickers/people/Troll%20face/" + angryFn.replace(" ", "%20"));
+                if (img != null) return img;
+            }
+            // Fallback: troll_boss.png / troll_boss_angry.png in other dirs
+            String fn = "default".equals(expr) ? "troll_boss.png" : "troll_boss_" + expr + ".png";
+            for (String base : new String[]{"Stickers/people/troll_boss/", "image/Chapter one/", "image/forest/"}) {
+                Image img = fromFile(base + fn);
+                if (img != null) return img;
+            }
+            Image img = fromClasspath("/image/Chapter one/" + fn);
+            if (img != null) return img;
+            img = fromClasspath("/image/forest/" + fn);
+            if (img != null) return img;
+            img = fromFile("image/Chapter one/troll_boss.png");
+            if (img != null) return img;
         }
         String name = character + "_" + expression;
         for (String ext : EXTENSIONS) {

@@ -1,8 +1,10 @@
 package game.scene;
 
+import game.model.GameState;
 import game.model.forest.ForestImageLoader;
 import game.model.forest.ForestResources;
 
+import javax.sound.sampled.Clip;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
@@ -17,6 +19,17 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
     private final List<Landmark> landmarks = new ArrayList<>();
     private Landmark hoverLandmark = null;
     private final SceneManager sceneManager;
+    private Clip mapMusicClip;
+    /** After Troll Cave + Doge done: click Troll = "We've been there"; click other = "We're going..." then black then go. */
+    private static final int PHASE_NORMAL = 0;
+    private static final int PHASE_BEEN_THERE_MSG = 1;
+    private static final int PHASE_GOING_MSG = 2;
+    private static final int PHASE_BLACK = 3;
+    private int mapPhase = PHASE_NORMAL;
+    private String goingToMessage = "";
+    private Landmark pendingDestination = null;
+    private static final long MESSAGE_DURATION_MS = 2500;
+    private long messageStartTime = 0;
 
     public static final class Landmark {
         public final String id;
@@ -74,10 +87,46 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
 
             @Override
             public void mouseReleased(java.awt.event.MouseEvent e) {
-                if (hoverLandmark != null && sceneManager != null) {
-                    Scene landmarkScene = new ForestLandmarkScene(hoverLandmark, () -> sceneManager.popScene());
-                    sceneManager.pushScene(landmarkScene);
+                if (sceneManager == null) return;
+                if (mapPhase == PHASE_BLACK) {
+                    if (pendingDestination != null) {
+                        Scene landmarkScene = new ForestLandmarkScene(pendingDestination, () -> sceneManager.popScene());
+                        sceneManager.pushScene(landmarkScene);
+                        pendingDestination = null;
+                    }
+                    mapPhase = PHASE_NORMAL;
+                    repaint();
+                    return;
                 }
+                if (mapPhase == PHASE_GOING_MSG) {
+                    mapPhase = PHASE_BLACK;
+                    repaint();
+                    return;
+                }
+                if (mapPhase == PHASE_BEEN_THERE_MSG) {
+                    mapPhase = PHASE_NORMAL;
+                    repaint();
+                    return;
+                }
+                if (hoverLandmark == null) return;
+                boolean completedTrollAndDoge = GameState.getState().hasCompletedTrollCaveAndChoseDoge();
+                if (completedTrollAndDoge && "troll_cave".equals(hoverLandmark.id)) {
+                    goingToMessage = "We've been there.";
+                    mapPhase = PHASE_BEEN_THERE_MSG;
+                    messageStartTime = System.currentTimeMillis();
+                    repaint();
+                    return;
+                }
+                if (completedTrollAndDoge) {
+                    goingToMessage = "We're going to " + hoverLandmark.displayName + ".";
+                    pendingDestination = hoverLandmark;
+                    mapPhase = PHASE_GOING_MSG;
+                    messageStartTime = System.currentTimeMillis();
+                    repaint();
+                    return;
+                }
+                Scene landmarkScene = new ForestLandmarkScene(hoverLandmark, () -> sceneManager.popScene());
+                sceneManager.pushScene(landmarkScene);
             }
 
             @Override
@@ -108,6 +157,16 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         int w = getWidth(), h = getHeight();
+
+        if (mapPhase == PHASE_BLACK) {
+            g2.setColor(Color.BLACK);
+            g2.fillRect(0, 0, w, h);
+            g2.setColor(new Color(180, 180, 170));
+            g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
+            g2.drawString("Click to continue.", w / 2 - 55, h / 2 + 8);
+            g2.dispose();
+            return;
+        }
 
         if (mapImage != null) {
             int iw = mapImage.getWidth(this);
@@ -160,20 +219,55 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
             g2.drawString(name, r.x + (r.width - fm.stringWidth(name)) / 2, r.y + (r.height + fm.getAscent()) / 2 - 2);
         }
 
+        if (mapPhase == PHASE_BEEN_THERE_MSG || mapPhase == PHASE_GOING_MSG) {
+            if (System.currentTimeMillis() - messageStartTime > MESSAGE_DURATION_MS && mapPhase == PHASE_BEEN_THERE_MSG)
+                mapPhase = PHASE_NORMAL;
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f));
+            g2.setColor(new Color(20, 20, 25));
+            g2.fillRoundRect(w / 2 - 200, h / 2 - 30, 400, 60, 12, 12);
+            g2.setStroke(new BasicStroke(2f));
+            g2.setColor(new Color(200, 160, 60));
+            g2.drawRoundRect(w / 2 - 200, h / 2 - 30, 400, 60, 12, 12);
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+            g2.setColor(new Color(240, 238, 230));
+            g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 16f));
+            FontMetrics fm = g2.getFontMetrics();
+            g2.drawString(goingToMessage, w / 2 - fm.stringWidth(goingToMessage) / 2, h / 2 + 8);
+            if (mapPhase == PHASE_GOING_MSG)
+                g2.drawString("Click again to go.", w / 2 - fm.stringWidth("Click again to go.") / 2, h / 2 + 28);
+        }
+
         g2.setColor(new Color(0, 0, 0, 120));
         g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 12f));
-        g2.drawString("Click a landmark to explore. (Music placeholder)", 10, h - 8);
+        g2.drawString("Click a landmark to explore.", 10, h - 8);
 
         g2.dispose();
     }
 
     @Override
     public void onEnter() {
+        mapPhase = PHASE_NORMAL;
+        pendingDestination = null;
+        if (mapMusicClip != null) {
+            try { if (mapMusicClip.isRunning()) mapMusicClip.stop(); mapMusicClip.close(); } catch (Exception ignore) {}
+            mapMusicClip = null;
+        }
+        mapMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
+        if (mapMusicClip != null) {
+            StartScene.applyVolumeToClipForScene(mapMusicClip, true);
+            mapMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+            mapMusicClip.start();
+        }
         requestFocusInWindow();
     }
 
     @Override
-    public void onExit() {}
+    public void onExit() {
+        if (mapMusicClip != null) {
+            try { if (mapMusicClip.isRunning()) mapMusicClip.stop(); mapMusicClip.close(); } catch (Exception ignore) {}
+            mapMusicClip = null;
+        }
+    }
 
     @Override
     public JPanel getPanel() {

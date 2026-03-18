@@ -23,6 +23,25 @@ public class StoryState implements Serializable {
     /** 当前使用的存档槽位（与游戏内 Save/Load 一致，读档时用同一槽） */
     private int lastUsedSaveSlot = 1;
 
+    /** Troll Cave dialogue index (0-based). Save/Load. */
+    private int trollCaveDialogueIndex = 0;
+    /** Troll Cave dialogue history for History menu. */
+    private final List<DialogueRecord> trollCaveHistory = new ArrayList<>();
+
+    public int getTrollCaveDialogueIndex() { return trollCaveDialogueIndex; }
+    public void setTrollCaveDialogueIndex(int i) { this.trollCaveDialogueIndex = Math.max(0, i); }
+    public List<DialogueRecord> getTrollCaveHistory() { return new ArrayList<>(trollCaveHistory); }
+    public void addTrollCaveHistory(String speaker, String text) { trollCaveHistory.add(new DialogueRecord(speaker, text)); }
+    public void setTrollCaveHistory(List<DialogueRecord> list) {
+        trollCaveHistory.clear();
+        if (list != null) trollCaveHistory.addAll(list);
+    }
+
+    /** After finishing Troll Cave flow and Doge Shrine dialogue, set so map shows "We've been there" for Troll Cave. */
+    private boolean hasCompletedTrollCaveAndChoseDoge = false;
+    public boolean hasCompletedTrollCaveAndChoseDoge() { return hasCompletedTrollCaveAndChoseDoge; }
+    public void setHasCompletedTrollCaveAndChoseDoge(boolean v) { this.hasCompletedTrollCaveAndChoseDoge = v; }
+
     public StoryState() {
         flags.put("flag_listened_to_king", false);
         flags.put("flag_found_diary", false);

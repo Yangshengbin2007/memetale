@@ -899,6 +899,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                 chapterTitlePhase = 4;
                 chapterEndBlackScreen = true;
                 loadBackgroundForDialogueIndex(ChapterOneData.LINES.length);
+                startPostChapterSequence();
                 dialog.dispose();
                 pauseMenuVisible = false;
                 repaint();
@@ -948,6 +949,8 @@ public class ChapterOneScene extends JPanel implements Scene {
                     loadBackgroundForDialogueIndex(idx);
                     if (idx >= ChapterOneData.LINES.length) {
                         chapterTitlePhase = 4;
+                        chapterEndBlackScreen = true;
+                        startPostChapterSequence();
                     } else {
                         lineStartTime = System.currentTimeMillis();
                     }
@@ -974,6 +977,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                 chapterTitlePhase = 4;
                 chapterEndBlackScreen = true;
                 loadBackgroundForDialogueIndex(ChapterOneData.LINES.length);
+                startPostChapterSequence();
                 dialog.dispose();
                 pauseMenuVisible = false;
                 repaint();
@@ -1161,6 +1165,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                 chapterTitlePhase = 4;
                 chapterEndBlackScreen = true;
                 sceneFadeAlpha = 1f;
+                startPostChapterSequence();
             } else {
                 chapterTitlePhase = 0;
                 chapterEndBlackScreen = false;
@@ -1171,16 +1176,18 @@ public class ChapterOneScene extends JPanel implements Scene {
                 chapterTitlePhase = 4;
                 chapterEndBlackScreen = true;
                 startPostChapterSequence();
+                enterFadeAlpha = 0f;
+                quoteTextAlpha = 0f;
             } else {
                 chapterTitlePhase = 0;
                 chapterEndBlackScreen = false;
                 chapterEndFadeOutActive = false;
+                enterFadeAlpha = 1f;
+                quoteTextAlpha = 0f;
+                enterFadeStartTime = System.currentTimeMillis();
+                if (enterFadeTimer != null && !enterFadeTimer.isRunning())
+                    enterFadeTimer.start();
             }
-            enterFadeAlpha = 1f;
-            quoteTextAlpha = 0f;
-            enterFadeStartTime = System.currentTimeMillis();
-            if (enterFadeTimer != null && !enterFadeTimer.isRunning())
-                enterFadeTimer.start();
         }
         if (titleTimer != null && titleTimer.isRunning())
             titleTimer.stop();
