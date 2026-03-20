@@ -28,7 +28,7 @@ This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves
   <img src="image/choose%20your%20way.jpg" alt="Choices" width="60%" />
 </p>
 
-*(Chapter Two / Three art and extra CGs ship with the `image/` folder as you add them.)*
+
 
 ---
 
