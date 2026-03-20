@@ -956,6 +956,24 @@ public class StartScene extends JPanel implements Scene {
         applyVolumeToClipForScene(clip, isMusic, 1f);
     }
 
+    /** Apply scene volume without the low-volume floor cutoff. */
+    public static void applyVolumeToClipForSceneNoFloor(Clip clip, boolean isMusic) {
+        if (clip == null) return;
+        float effective = masterVolumeStatic * (isMusic ? (muteAllMusicStatic ? 0f : 1f) : (muteAllSoundEffectsStatic ? 0f : 1f));
+        try {
+            if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                float v = Math.max(0f, Math.min(1f, effective));
+                if (v == 0f) gain.setValue(gain.getMinimum());
+                else {
+                    float dB = (float) (20.0 * Math.log10(v));
+                    dB = Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), dB));
+                    gain.setValue(dB);
+                }
+            }
+        } catch (Exception ignore) {}
+    }
+
     /**
      * Same as above with a volume scale (0..1]. When scale < 1 the clip is quieter.
      * When master volume is below 0.5 (50%), effective volume is forced to 0 (for subtle ambience that disappears at low volume).
@@ -1084,7 +1102,8 @@ public class StartScene extends JPanel implements Scene {
             int c = JOptionPane.showConfirmDialog(dialog, "Are you sure? This may affect your game experience.", "Chapter One", JOptionPane.YES_NO_OPTION);
             if (c == JOptionPane.YES_OPTION) {
                 StoryState st = GameState.getState();
-                st.setChapterOneDialogueIndex(0);
+                // Skip opening quote + in-chapter CG dialogue; jump to title sticker / post-chapter flow (same as end of Ch.1).
+                st.setChapterOneDialogueIndex(ChapterOneData.LINES.length);
                 st.setChapterOneHistory(new java.util.ArrayList<>());
                 st.setSavedChapter(1);
                 st.setCurrentScene("chapter_one");
@@ -1146,7 +1165,8 @@ public class StartScene extends JPanel implements Scene {
             int c = JOptionPane.showConfirmDialog(dialog, "Are you sure? This may affect your game experience.", "Chapter One", JOptionPane.YES_NO_OPTION);
             if (c == JOptionPane.YES_OPTION) {
                 StoryState st = GameState.getState();
-                st.setChapterOneDialogueIndex(0);
+                // Continue → Chapter One: skip quote + all Ch.1 dialogue; start at title.png / post-chapter sequence.
+                st.setChapterOneDialogueIndex(ChapterOneData.LINES.length);
                 st.setChapterOneHistory(new java.util.ArrayList<>());
                 st.setSavedChapter(1);
                 st.setCurrentScene("chapter_one");

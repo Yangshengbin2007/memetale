@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class StoryState implements Serializable {
-    private static final long serialVersionUID = 3L;
+    private static final long serialVersionUID = 5L;
 
     // simple flag storage; can be expanded
     private final Map<String, Boolean> flags = new HashMap<>();
@@ -41,6 +41,20 @@ public class StoryState implements Serializable {
     private boolean hasCompletedTrollCaveAndChoseDoge = false;
     public boolean hasCompletedTrollCaveAndChoseDoge() { return hasCompletedTrollCaveAndChoseDoge; }
     public void setHasCompletedTrollCaveAndChoseDoge(boolean v) { this.hasCompletedTrollCaveAndChoseDoge = v; }
+
+    /** Troll cave post-battle scene progress (block 0–1, line within block). */
+    private int postBattleBlockIndex = 0;
+    private int postBattleLineIndex = 0;
+
+    public int getPostBattleBlockIndex() { return postBattleBlockIndex; }
+    public void setPostBattleBlockIndex(int postBattleBlockIndex) { this.postBattleBlockIndex = Math.max(0, Math.min(1, postBattleBlockIndex)); }
+    public int getPostBattleLineIndex() { return postBattleLineIndex; }
+    public void setPostBattleLineIndex(int postBattleLineIndex) { this.postBattleLineIndex = Math.max(0, postBattleLineIndex); }
+
+    /** Post-battle scene: black screen before returning to map (save/load resume). */
+    private boolean postBattleBlackScreen = false;
+    public boolean isPostBattleBlackScreen() { return postBattleBlackScreen; }
+    public void setPostBattleBlackScreen(boolean postBattleBlackScreen) { this.postBattleBlackScreen = postBattleBlackScreen; }
 
     public StoryState() {
         flags.put("flag_listened_to_king", false);

@@ -325,7 +325,8 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
         mapMusicClip = StartScene.loadMusicFromMusicDir("map.wav");
         if (mapMusicClip == null) mapMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
         if (mapMusicClip != null) {
-            StartScene.applyVolumeToClipForScene(mapMusicClip, true);
+            // Map BGM should always follow music volume directly (no low-volume cutoff).
+            StartScene.applyVolumeToClipForSceneNoFloor(mapMusicClip, true);
             mapMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
             mapMusicClip.start();
         }

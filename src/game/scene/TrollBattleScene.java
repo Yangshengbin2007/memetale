@@ -2,6 +2,11 @@ package game.scene;
 
 import javax.sound.sampled.Clip;
 import javax.swing.*;
+import javax.swing.event.ChangeListener;
+import game.io.SaveLoad;
+import game.model.DialogueRecord;
+import game.model.GameState;
+import game.model.StoryState;
 import game.model.forest.ForestImageLoader;
 
 import java.awt.*;
@@ -15,15 +20,28 @@ import java.util.Random;
  * Undertale-style bullet-hell: battle box, red heart, arrow keys.
  * Theme: Internet / Cancel culture. Bullets: "CANCELLED", glitch squares.
  * Normal mode: 3 phases (Cancel Warm-up, Public Pressure, Final Judgment).
- * Hell mode: same structure, harder (more bullets, delays, fake attacks).
+ * Hell mode: same structure, harder — dense but spaced for human reaction; survival time freezes on death.
  * All text in English.
  */
 public class TrollBattleScene extends JPanel implements Scene {
+    /** Avoid direct dependency on {@code TrollCaveData} (IDE/sourcepath quirks); matches save index for cave dialogue length. */
+    private static int getTrollCaveMainLineCount() {
+        try {
+            Class<?> c = Class.forName("game.model.forest.TrollCaveData");
+            Object v = c.getField("LINES").get(null);
+            return ((String[][]) v).length;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private final boolean hellMode;
     /** true = main story (cave boss), can spawn golden item; false = minigame/hell, no golden item. */
     private final boolean allowGoldenItem;
     private final Runnable onVictory;
     private final Runnable onQuitToTitle;
+    /** After Load from pause menu: switch scene from saved {@link StoryState#getCurrentScene()}. */
+    private Runnable navigateAfterLoad;
 
     private static final int BOX_MARGIN_X = 80;
     private static final int BOX_MARGIN_TOP = 130;
@@ -58,6 +76,8 @@ public class TrollBattleScene extends JPanel implements Scene {
     private int waveInPhase = 0;
     private long phaseStartTime;
     private long battleStartTime;
+    /** Hell mode: survival time (ms) frozen at death so UI does not keep counting. */
+    private long hellSurvivalFrozenMs = -1L;
     private final BattlePlayer player = new BattlePlayer();
     private final List<Bullet> bullets = new ArrayList<>();
     private final List<GoldenItem> goldenItems = new ArrayList<>();
@@ -91,7 +111,9 @@ public class TrollBattleScene extends JPanel implements Scene {
     private long defeatReactionStart = -1;
     private static final int DEFEAT_REACTION_MS = 2200;
     private static final int ANGRY_REACTION_MS = 1500;
-    private static final int PHASE3_SPAWN_MS = 20000;
+    /** Main story phase 3 frenzy spawn window (seconds of dense bullets). */
+    private static final int PHASE3_SPAWN_MS = 5000;
+    private static final int ORBIT_LIFETIME_MS = 10000;
     private boolean phase3SpawnStopped = false;
     private Image topTrollDefault, topTrollLaugh, topTrollScared, topTrollDefeat, topTrollAngry;
     private final List<Image> bulletTrollImages = new ArrayList<>();
@@ -115,6 +137,23 @@ public class TrollBattleScene extends JPanel implements Scene {
         "You're really bad at this game.", "Skill issue. We're skipping this.", "Game over. For you. Literally."
     };
     private long lastPeriodicDialogueTime;
+    /** Main story victory: auto-advance to next scene at this time (paused while ESC menu open). */
+    private long victoryResumeAt = -1;
+    private long victoryRemainingMsWhenMenuOpened = 0;
+    private int hellChaosAccum = 0;
+
+    private boolean pauseMenuVisible = false;
+    private boolean hoverPauseSave, hoverPauseLoad, hoverPauseSettings, hoverPauseHistory, hoverPauseQuit;
+    private boolean pressedPauseSave, pressedPauseLoad, pressedPauseSettings, pressedPauseHistory, pressedPauseQuit;
+    private final Rectangle pauseSaveBounds = new Rectangle();
+    private final Rectangle pauseLoadBounds = new Rectangle();
+    private final Rectangle pauseSettingsBounds = new Rectangle();
+    private final Rectangle pauseHistoryBounds = new Rectangle();
+    private final Rectangle pauseQuitBounds = new Rectangle();
+
+    public void setNavigateAfterLoad(Runnable navigateAfterLoad) {
+        this.navigateAfterLoad = navigateAfterLoad;
+    }
 
     public TrollBattleScene(boolean hellMode, boolean allowGoldenItem, Runnable onVictory, Runnable onQuitToTitle) {
         this.hellMode = hellMode;
@@ -128,9 +167,33 @@ public class TrollBattleScene extends JPanel implements Scene {
     }
 
     private void initDeathMouse() {
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                Point p = e.getPoint();
+                if (pauseMenuVisible) {
+                    hoverPauseSave = pauseSaveBounds.contains(p);
+                    hoverPauseLoad = pauseLoadBounds.contains(p);
+                    hoverPauseSettings = pauseSettingsBounds.contains(p);
+                    hoverPauseHistory = pauseHistoryBounds.contains(p);
+                    hoverPauseQuit = pauseQuitBounds.contains(p);
+                    repaint();
+                }
+            }
+        });
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                if (pauseMenuVisible) {
+                    Point p = e.getPoint();
+                    pressedPauseSave = pauseSaveBounds.contains(p);
+                    pressedPauseLoad = pauseLoadBounds.contains(p);
+                    pressedPauseSettings = pauseSettingsBounds.contains(p);
+                    pressedPauseHistory = pauseHistoryBounds.contains(p);
+                    pressedPauseQuit = pauseQuitBounds.contains(p);
+                    repaint();
+                    return;
+                }
                 if (dead) {
                     if (deathPhase != 0) return;
                 } else if (victoryAskReplay) {
@@ -187,6 +250,30 @@ public class TrollBattleScene extends JPanel implements Scene {
                     }
                 }
             }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!pauseMenuVisible) return;
+                Point p = e.getPoint();
+                if (pressedPauseSave && pauseSaveBounds.contains(p)) handleVictoryPauseSave();
+                else if (pressedPauseLoad && pauseLoadBounds.contains(p)) handleVictoryPauseLoad();
+                else if (pressedPauseSettings && pauseSettingsBounds.contains(p)) handleVictoryPauseSettings();
+                else if (pressedPauseHistory && pauseHistoryBounds.contains(p)) handleVictoryPauseHistory();
+                else if (pressedPauseQuit && pauseQuitBounds.contains(p)) {
+                    int c = JOptionPane.showConfirmDialog(TrollBattleScene.this, "Are you sure you want to quit?", "Quit to Title", JOptionPane.YES_NO_OPTION);
+                    if (c == JOptionPane.YES_OPTION && onQuitToTitle != null) {
+                        pauseMenuVisible = false;
+                        if (gameTimer != null) gameTimer.stop();
+                        onQuitToTitle.run();
+                    }
+                } else if (!pauseSaveBounds.contains(p) && !pauseLoadBounds.contains(p) && !pauseSettingsBounds.contains(p) && !pauseHistoryBounds.contains(p) && !pauseQuitBounds.contains(p)) {
+                    pauseMenuVisible = false;
+                    if (victory && !victoryAskReplay && allowGoldenItem && !hellMode)
+                        victoryResumeAt = System.currentTimeMillis() + Math.max(0, victoryRemainingMsWhenMenuOpened);
+                }
+                pressedPauseSave = pressedPauseLoad = pressedPauseSettings = pressedPauseHistory = pressedPauseQuit = false;
+                repaint();
+            }
         });
     }
 
@@ -200,6 +287,18 @@ public class TrollBattleScene extends JPanel implements Scene {
                     case KeyEvent.VK_LEFT:  left = true; e.consume(); break;
                     case KeyEvent.VK_RIGHT: right = true; e.consume(); break;
                     case KeyEvent.VK_ESCAPE:
+                        if (allowGoldenItem && !hellMode && victory && !victoryAskReplay && !dead) {
+                            if (pauseMenuVisible) {
+                                pauseMenuVisible = false;
+                                victoryResumeAt = System.currentTimeMillis() + Math.max(0, victoryRemainingMsWhenMenuOpened);
+                            } else {
+                                victoryRemainingMsWhenMenuOpened = Math.max(0, victoryResumeAt - System.currentTimeMillis());
+                                victoryResumeAt = Long.MAX_VALUE;
+                                pauseMenuVisible = true;
+                            }
+                            e.consume();
+                            break;
+                        }
                         if (onQuitToTitle != null) {
                             int c = JOptionPane.showConfirmDialog(TrollBattleScene.this, "Quit to title?", "Quit", JOptionPane.YES_NO_OPTION);
                             if (c == JOptionPane.YES_OPTION) onQuitToTitle.run();
@@ -260,6 +359,11 @@ public class TrollBattleScene extends JPanel implements Scene {
         currentBoxScale = NORMAL_BOX_SCALE;
         battleStartTime = System.currentTimeMillis();
         phaseStartTime = battleStartTime;
+        hellSurvivalFrozenMs = -1L;
+        victoryResumeAt = -1;
+        victoryRemainingMsWhenMenuOpened = 0;
+        pauseMenuVisible = false;
+        hellChaosAccum = 0;
         loadTrollBattleImages();
         showDialogue("Let's start easy.");
         if (gameTimer != null) gameTimer.stop();
@@ -312,6 +416,11 @@ public class TrollBattleScene extends JPanel implements Scene {
         currentBoxScale = NORMAL_BOX_SCALE;
         battleStartTime = System.currentTimeMillis();
         phaseStartTime = battleStartTime;
+        hellSurvivalFrozenMs = -1L;
+        pauseMenuVisible = false;
+        victoryResumeAt = -1;
+        victoryRemainingMsWhenMenuOpened = 0;
+        hellChaosAccum = 0;
         showDialogue("Try again.");
         if (gameTimer != null) gameTimer.stop();
         gameTimer = new javax.swing.Timer(TICK_MS, e -> tick());
@@ -409,10 +518,14 @@ public class TrollBattleScene extends JPanel implements Scene {
             return;
         }
         if (victory) {
-            if (defeatReactionStart >= 0 && (now - defeatReactionStart) > DEFEAT_REACTION_MS) {
-                // Minigame normal: ask replay instead of immediately returning.
+            if (pauseMenuVisible) {
+                repaint();
+                return;
+            }
+            if (victoryResumeAt > 0 && victoryResumeAt != Long.MAX_VALUE && now >= victoryResumeAt) {
                 if (!hellMode && !allowGoldenItem) {
                     victoryAskReplay = true;
+                    victoryResumeAt = -1;
                 } else {
                     if (gameTimer != null) gameTimer.stop();
                     if (onVictory != null) onVictory.run();
@@ -443,6 +556,14 @@ public class TrollBattleScene extends JPanel implements Scene {
         if (right) player.x = Math.min(boxX + boxW - HEART_SIZE, player.x + 4);
 
         spawnBullets(now);
+        // Extra hell patterns: rare enough to stay readable (dodgeable / theoretically no-hit).
+        if (hellMode && !dead && !victory) {
+            hellChaosAccum += TICK_MS;
+            if (hellChaosAccum >= 720) {
+                hellChaosAccum = 0;
+                if (rnd.nextInt(3) == 0) spawnHellRandomBurst(now);
+            }
+        }
         // Main story only: golden item appears randomly in phases until it is caught once.
         if (allowGoldenItem && !hellMode && !goldenItemAcquired
             && goldenSpawnPhase == phase && !goldenItemSpawned && waveInPhase >= 1) {
@@ -451,6 +572,10 @@ public class TrollBattleScene extends JPanel implements Scene {
 
         for (int i = bullets.size() - 1; i >= 0; i--) {
             Bullet b = bullets.get(i);
+            if (b.orbit && b.orbitDieAt > 0 && now >= b.orbitDieAt) {
+                bullets.remove(i);
+                continue;
+            }
             if (b.orbit) {
                 b.orbitAngle += b.orbitSpeed;
                 b.x = b.orbitCx + b.orbitRadius * (float)Math.cos(b.orbitAngle) - b.w / 2f;
@@ -501,9 +626,9 @@ public class TrollBattleScene extends JPanel implements Scene {
                     hp = 0;
                     dead = true;
                     deathPhase = 0;
+                    if (hellMode) hellSurvivalFrozenMs = Math.max(0L, now - battleStartTime);
                     if (knightImage == null) knightImage = ForestImageLoader.loadCharacter("darabongba", "default");
-                    // Keep the timer running so the "death dialogue" can keep repainting.
-                    // (We stop bullet spawning because tick() returns early when dead==true.)
+                    // Keep the Swing timer for repaints; survival clock is frozen (hellSurvivalFrozenMs).
                     repaint();
                     return;
                 }
@@ -558,9 +683,9 @@ public class TrollBattleScene extends JPanel implements Scene {
                 showDialogue("Let's start easy.");
             }
             if (waveInPhase == 1) {
-                int interval = hellMode ? 800 : 1200;
+                int interval = hellMode ? 560 : 1200;
                 if ((int)(elapsed / interval) > (int)((elapsed - TICK_MS) / interval)) {
-                    int n = reducedCount(hellMode ? 8 : 2);
+                    int n = hellMode ? 9 : reducedCount(2);
                     for (int i = 0; i < n; i++) {
                         Bullet b = new Bullet();
                         b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
@@ -568,7 +693,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                         b.w = BULLET_SIZE;
                         b.h = BULLET_SIZE;
                         b.vx = 0;
-                        b.vy = hellMode ? 1.8f : 1.2f;
+                        b.vy = hellMode ? 1.45f : 1.2f;
                         b.text = "";
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                         bullets.add(b);
@@ -580,15 +705,15 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if ((int)(elapsed / 1000) > (int)((elapsed - TICK_MS) / 1000) && elapsed > 5500) {
                     boolean leftToRight = rnd.nextBoolean();
                     int row = boxY + 20 + rnd.nextInt(Math.max(1, boxH - 80));
-                    int gap = hellMode ? 32 : 45;
+                    int gap = hellMode ? 30 : 45;
                     for (int col = 0; col < boxW; col += gap) {
                         Bullet b = new Bullet();
                         b.w = 18;
                         b.h = 8;
                         b.y = row;
                         b.vy = 0;
-                        if (leftToRight) { b.x = boxX - 20; b.vx = hellMode ? 3f : 2.2f; }
-                        else { b.x = boxX + boxW + 20; b.vx = hellMode ? -3f : -2.2f; }
+                        if (leftToRight) { b.x = boxX - 20; b.vx = hellMode ? 2.45f : 2.2f; }
+                        else { b.x = boxX + boxW + 20; b.vx = hellMode ? -2.45f : -2.2f; }
                         b.text = "";
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                         bullets.add(b);
@@ -600,7 +725,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if ((int)(elapsed / 700) > (int)((elapsed - TICK_MS) / 700) && elapsed > 10500) {
                     int corner = rnd.nextInt(4);
                     double angle = corner * Math.PI / 2 + 0.3 + rnd.nextDouble() * 0.4;
-                    double spd = hellMode ? 2.2 : 1.6;
+                    double spd = hellMode ? 1.75 : 1.6;
                     Bullet b = new Bullet();
                     if (corner == 0) { b.x = boxX; b.y = boxY; }
                     else if (corner == 1) { b.x = boxX + boxW - BULLET_SIZE; b.y = boxY; }
@@ -624,14 +749,15 @@ public class TrollBattleScene extends JPanel implements Scene {
         } else if (phase == 2) {
             if (waveInPhase == 0 && elapsed > 400) { waveInPhase = 1; showDialogue("Let's see how you handle pressure."); }
             if (waveInPhase == 1) {
-                if ((int)(elapsed / 900) > (int)((elapsed - TICK_MS) / 900)) {
-                    int n = reducedCount(hellMode ? 6 : 2);
+                int tickHell = hellMode ? 620 : 900;
+                if ((int)(elapsed / tickHell) > (int)((elapsed - TICK_MS) / tickHell)) {
+                    int n = hellMode ? 9 : reducedCount(2);
                     for (int i = 0; i < n; i++) {
                         Bullet b = new Bullet();
                         b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
                         b.y = boxY - BULLET_SIZE;
                         b.vx = 0;
-                        b.vy = hellMode ? 2f : 1.4f;
+                        b.vy = hellMode ? 1.55f : 1.4f;
                         b.w = BULLET_SIZE;
                         b.h = BULLET_SIZE;
                         b.text = "";
@@ -642,7 +768,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                     b2.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
                     b2.y = boxY + boxH;
                     b2.vx = 0;
-                    b2.vy = hellMode ? -2f : -1.4f;
+                    b2.vy = hellMode ? -1.55f : -1.4f;
                     b2.w = BULLET_SIZE;
                     b2.h = BULLET_SIZE;
                     b2.text = "";
@@ -652,8 +778,9 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if (elapsed > 5000) { waveInPhase = 2; showDialogue("It warned me!"); }
             }
             if (waveInPhase == 2) {
-                int colGap = hellMode ? Math.max(18, 26 - difficultyReductions * 2) : 40;
-                if ((int)(elapsed / 1200) > (int)((elapsed - TICK_MS) / 1200) && elapsed > 5500) {
+                int colGap = hellMode ? Math.max(22, 28 - difficultyReductions * 2) : 40;
+                int rowTick = hellMode ? 920 : 1200;
+                if ((int)(elapsed / rowTick) > (int)((elapsed - TICK_MS) / rowTick) && elapsed > 5500) {
                     boolean leftToRight = rnd.nextBoolean();
                     int row = boxY + 30 + rnd.nextInt(Math.max(1, boxH - 60));
                     for (int col = 0; col < boxW; col += colGap) {
@@ -662,8 +789,8 @@ public class TrollBattleScene extends JPanel implements Scene {
                         b.h = 10;
                         b.y = row;
                         b.vy = 0;
-                        if (leftToRight) { b.x = boxX - 25; b.vx = hellMode ? 3.2f : 2.5f; }
-                        else { b.x = boxX + boxW + 25; b.vx = hellMode ? -3.2f : -2.5f; }
+                        if (leftToRight) { b.x = boxX - 25; b.vx = hellMode ? 2.55f : 2.5f; }
+                        else { b.x = boxX + boxW + 25; b.vx = hellMode ? -2.55f : -2.5f; }
                         b.text = "";
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                         bullets.add(b);
@@ -671,10 +798,10 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
                 if (elapsed > 12000) { waveInPhase = 3; showDialogue("No safe opinions."); }
             }
-            if (hellMode && elapsed > 6000 && (int)(elapsed / 4000) > (int)((elapsed - TICK_MS) / 4000)) {
+            if (hellMode && elapsed > 6000 && (int)(elapsed / 5200) > (int)((elapsed - TICK_MS) / 5200)) {
                 float cx = boxX + boxW / 2f;
                 float cy = boxY + boxH / 2f;
-                int n = 14;
+                int n = 10;
                 float radius = Math.min(boxW, boxH) * 0.35f;
                 for (int i = 0; i < n; i++) {
                     Bullet b = new Bullet();
@@ -689,11 +816,12 @@ public class TrollBattleScene extends JPanel implements Scene {
                     b.x = b.orbitCx + b.orbitRadius * (float)Math.cos(b.orbitAngle) - b.w / 2f;
                     b.y = b.orbitCy + b.orbitRadius * (float)Math.sin(b.orbitAngle) - b.h / 2f;
                     b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    markOrbitLifetime(b, now);
                     bullets.add(b);
                 }
             }
-            if (hellMode && elapsed > 8000 && (int)(elapsed / 3200) > (int)((elapsed - TICK_MS) / 3200)) {
-                for (int i = 0; i < 5; i++) {
+            if (hellMode && elapsed > 8000 && (int)(elapsed / 4200) > (int)((elapsed - TICK_MS) / 4200)) {
+                for (int i = 0; i < 3; i++) {
                     Bullet b = new Bullet();
                     b.x = boxX + 30 + rnd.nextInt(Math.max(1, boxW - 80));
                     b.y = boxY - BULLET_SIZE;
@@ -706,12 +834,12 @@ public class TrollBattleScene extends JPanel implements Scene {
                     bullets.add(b);
                 }
             }
-            if (hellMode && elapsed > 10000 && (int)(elapsed / 4200) > (int)((elapsed - TICK_MS) / 4200)) {
+            if (hellMode && elapsed > 10000 && (int)(elapsed / 5200) > (int)((elapsed - TICK_MS) / 5200)) {
                 int gapCenter = boxW / 2;
-                int gapHalf = 50;
+                int gapHalf = 56;
                 for (int row = 0; row < 2; row++) {
                     int y = boxY + 40 + row * (boxH - 80) / 2;
-                    for (int col = 0; col < boxW; col += 28) {
+                    for (int col = 0; col < boxW; col += 34) {
                         if (col >= gapCenter - gapHalf && col <= gapCenter + gapHalf) continue;
                         Bullet b = new Bullet();
                         b.w = 20;
@@ -729,7 +857,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if ((int)(elapsed / 1000) > (int)((elapsed - TICK_MS) / 1000) && elapsed > 12500) {
                     int cx = boxX + boxW / 2 - 10;
                     int cy = boxY + boxH / 2 - 10;
-                    int rays = hellMode ? 8 : 4;
+                    int rays = hellMode ? 6 : 4;
                     for (int i = 0; i < rays; i++) {
                         Bullet b = new Bullet();
                         b.w = 20;
@@ -737,7 +865,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                         b.x = cx;
                         b.y = cy;
                         double a = i * Math.PI * 2 / rays + (rnd.nextDouble() * 0.3);
-                        double spd = hellMode ? 2.5 : 2;
+                        double spd = hellMode ? 2.05 : 2;
                         b.vx = (float)(Math.cos(a) * spd);
                         b.vy = (float)(Math.sin(a) * spd);
                         b.text = "";
@@ -748,8 +876,8 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if (elapsed > 18000) { waveInPhase = 4; showDialogue("This is chaos!"); }
             }
             if (waveInPhase == 4) {
-                if ((int)(elapsed / 850) > (int)((elapsed - TICK_MS) / 850) && elapsed > 18500) {
-                    int n = hellMode ? 6 : 2;
+                if ((int)(elapsed / 950) > (int)((elapsed - TICK_MS) / 950) && elapsed > 18500) {
+                    int n = hellMode ? 7 : 2;
                     for (int i = 0; i < n; i++) {
                         Bullet b = new Bullet();
                         b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
@@ -780,25 +908,29 @@ public class TrollBattleScene extends JPanel implements Scene {
             if (waveInPhase == 0) {
                 currentBoxScale = NORMAL_BOX_SCALE - (float)((elapsed / 2000.0) * (NORMAL_BOX_SCALE - SHRINK_BOX_SCALE));
                 if (currentBoxScale < SHRINK_BOX_SCALE) currentBoxScale = SHRINK_BOX_SCALE;
-                if (canSpawnPhase3 && elapsed > 500 && (int)(elapsed / 1000) > (int)((elapsed - TICK_MS) / 1000)) {
-                    Bullet b = new Bullet();
-                    b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
-                    b.y = boxY - BULLET_SIZE;
-                    b.w = BULLET_SIZE;
-                    b.h = BULLET_SIZE;
-                    b.vx = 0;
-                    b.vy = 1.8f;
-                    b.text = "";
-                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
-                    bullets.add(b);
+                if (canSpawnPhase3 && elapsed > 400 && (int)(elapsed / (hellMode ? 280 : 220)) > (int)((elapsed - TICK_MS) / (hellMode ? 280 : 220))) {
+                    int drops = hellMode ? 3 : 4;
+                    for (int q = 0; q < drops; q++) {
+                        Bullet b = new Bullet();
+                        b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
+                        b.y = boxY - BULLET_SIZE;
+                        b.w = BULLET_SIZE;
+                        b.h = BULLET_SIZE;
+                        b.vx = hellMode ? (rnd.nextFloat() - 0.5f) * 1.2f : 0;
+                        b.vy = hellMode ? 1.9f + rnd.nextFloat() * 0.8f : 1.8f;
+                        b.text = "";
+                        b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                        bullets.add(b);
+                    }
                 }
                 if (elapsed > 2500) { waveInPhase = 1; showDialogue("Let's make this… tighter."); }
             }
             if (waveInPhase == 1 && canSpawnPhase3) {
-                if ((int)(elapsed / 1100) > (int)((elapsed - TICK_MS) / 1100) && elapsed > 3500) {
+                int rayTick = hellMode ? 700 : 400;
+                if ((int)(elapsed / rayTick) > (int)((elapsed - TICK_MS) / rayTick) && elapsed > (hellMode ? 3200 : 2800)) {
                     int cx = boxX + boxW / 2 - BULLET_SIZE / 2;
                     int cy = boxY + boxH / 2 - BULLET_SIZE / 2;
-                    int rays = hellMode ? 18 : 16;
+                    int rays = hellMode ? 14 : 18;
                     for (int i = 0; i < rays; i++) {
                         Bullet b = new Bullet();
                         double a = i * Math.PI * 2 / rays;
@@ -806,7 +938,7 @@ public class TrollBattleScene extends JPanel implements Scene {
                         b.y = cy;
                         b.w = BULLET_SIZE;
                         b.h = BULLET_SIZE;
-                        double spd = hellMode ? 2.4 : 2.2;
+                        double spd = hellMode ? 2.05 : 2.1;
                         b.vx = (float)(Math.cos(a) * spd);
                         b.vy = (float)(Math.sin(a) * spd);
                         // Phase 3 should clear naturally; no bouncing bullets here.
@@ -819,10 +951,11 @@ public class TrollBattleScene extends JPanel implements Scene {
                 if (elapsed > 6500) { waveInPhase = 2; showDialogue("Final verdict."); }
             }
             if (waveInPhase == 2 && canSpawnPhase3) {
-                if ((int)(elapsed / 500) > (int)((elapsed - TICK_MS) / 500) && elapsed > 7000) {
+                int rowTick = hellMode ? 520 : 280;
+                if ((int)(elapsed / rowTick) > (int)((elapsed - TICK_MS) / rowTick) && elapsed > (hellMode ? 6500 : 6000)) {
                     boolean leftToRight = rnd.nextBoolean();
-                    int gap = hellMode ? 48 : 58;
-                    int rows = hellMode ? 3 : 2;
+                    int gap = hellMode ? 48 : 42;
+                    int rows = 3;
                     for (int r = 0; r < rows; r++) {
                         int row = boxY + 20 + (boxH - 40) * r / Math.max(1, rows - 1) + rnd.nextInt(8);
                         for (int col = 0; col < boxW; col += gap) {
@@ -842,10 +975,10 @@ public class TrollBattleScene extends JPanel implements Scene {
                 }
             }
             if (hellMode && phase == 3 && elapsed > 3000) {
-                if ((int)(elapsed / 3500) > (int)((elapsed - TICK_MS) / 3500)) {
+                if ((int)(elapsed / 4200) > (int)((elapsed - TICK_MS) / 4200)) {
                     float cx = boxX + boxW / 2f;
                     float cy = boxY + boxH / 2f;
-                    int n = 16;
+                    int n = 10;
                     float radius = Math.min(boxW, boxH) * 0.32f;
                     for (int i = 0; i < n; i++) {
                         Bullet b = new Bullet();
@@ -856,40 +989,41 @@ public class TrollBattleScene extends JPanel implements Scene {
                         b.orbitCy = cy;
                         b.orbitRadius = radius + (i % 4) * 6;
                         b.orbitAngle = (float)(i * Math.PI * 2 / n - elapsed * 0.002);
-                        b.orbitSpeed = -0.032f;
+                        b.orbitSpeed = -0.026f;
                         b.x = b.orbitCx + b.orbitRadius * (float)Math.cos(b.orbitAngle) - b.w / 2f;
                         b.y = b.orbitCy + b.orbitRadius * (float)Math.sin(b.orbitAngle) - b.h / 2f;
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                        markOrbitLifetime(b, now);
                         bullets.add(b);
                     }
                 }
-                if ((int)(elapsed / 2800) > (int)((elapsed - TICK_MS) / 2800)) {
-                    for (int i = 0; i < reducedCount(6); i++) {
+                if ((int)(elapsed / 3600) > (int)((elapsed - TICK_MS) / 3600)) {
+                    for (int i = 0; i < reducedCount(4); i++) {
                         Bullet b = new Bullet();
                         b.x = boxX + 20 + rnd.nextInt(Math.max(1, boxW - 60));
                         b.y = boxY + boxH + BULLET_SIZE;
                         b.w = BULLET_SIZE;
                         b.h = BULLET_SIZE;
                         b.vx = (rnd.nextFloat() - 0.5f) * 1f;
-                        b.vy = -1.6f - rnd.nextFloat() * 0.5f;
+                        b.vy = -1.35f - rnd.nextFloat() * 0.45f;
                         b.driftRotSpeed = -0.018f;
                         b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                         bullets.add(b);
                     }
                 }
-                if ((int)(elapsed / 3800) > (int)((elapsed - TICK_MS) / 3800) && elapsed > 5000) {
+                if ((int)(elapsed / 4600) > (int)((elapsed - TICK_MS) / 4600) && elapsed > 5000) {
                     int gapCenter = boxW / 2;
-                    int gapHalf = 45;
-                    for (int row = 0; row < 3; row++) {
-                        int y = boxY + 30 + row * (boxH - 60) / 2;
-                        for (int col = 0; col < boxW; col += 24) {
+                    int gapHalf = 54;
+                    for (int row = 0; row < 2; row++) {
+                        int y = boxY + 32 + row * (boxH - 64) / 2;
+                        for (int col = 0; col < boxW; col += 32) {
                             if (col >= gapCenter - gapHalf && col <= gapCenter + gapHalf) continue;
                             Bullet b = new Bullet();
                             b.w = 18;
                             b.h = 10;
                             b.x = boxX + col;
                             b.y = y;
-                            b.vx = col < gapCenter ? 2.2f : -2.2f;
+                            b.vx = col < gapCenter ? 1.85f : -1.85f;
                             b.vy = 0;
                             b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
                             bullets.add(b);
@@ -905,8 +1039,136 @@ public class TrollBattleScene extends JPanel implements Scene {
         if (!hellMode && wavesComplete && phase3SpawnStopped && bullets.isEmpty() && !victory) {
             victory = true;
             defeatReactionStart = now;
+            victoryResumeAt = now + DEFEAT_REACTION_MS;
             topTrollState = "defeat";
             showDialogue("I lost.");
+        }
+    }
+
+    private void markOrbitLifetime(Bullet b, long now) {
+        b.orbitDieAt = now + ORBIT_LIFETIME_MS;
+    }
+
+    /** Extra hell-only chaos patterns; timing is random each burst. */
+    private void spawnHellRandomBurst(long now) {
+        int pattern = rnd.nextInt(7);
+        switch (pattern) {
+            case 0 -> {
+                for (int i = 0; i < 7; i++) {
+                    Bullet b = new Bullet();
+                    b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
+                    b.y = boxY - BULLET_SIZE;
+                    b.w = BULLET_SIZE;
+                    b.h = BULLET_SIZE;
+                    b.vx = (rnd.nextFloat() - 0.5f) * 1.5f;
+                    b.vy = 1.35f + rnd.nextFloat() * 0.9f;
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    bullets.add(b);
+                }
+            }
+            case 1 -> {
+                boolean lr = rnd.nextBoolean();
+                for (int row = 0; row < 3; row++) {
+                    int y = boxY + 16 + row * (boxH - 32) / 2;
+                    for (int k = 0; k < 7; k++) {
+                        Bullet b = new Bullet();
+                        b.w = 20;
+                        b.h = 10;
+                        b.y = y + rnd.nextInt(5);
+                        b.vy = 0;
+                        if (lr) { b.x = boxX - 36 - k * 10; b.vx = 2.75f + rnd.nextFloat() * 0.4f; }
+                        else { b.x = boxX + boxW + 36 + k * 10; b.vx = -2.75f - rnd.nextFloat() * 0.4f; }
+                        b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                        bullets.add(b);
+                    }
+                }
+            }
+            case 2 -> {
+                float cx = boxX + boxW / 2f;
+                float cy = boxY + boxH / 2f;
+                int n = 11 + rnd.nextInt(5);
+                float radius = Math.min(boxW, boxH) * (0.26f + rnd.nextFloat() * 0.08f);
+                for (int i = 0; i < n; i++) {
+                    Bullet b = new Bullet();
+                    b.w = BULLET_SIZE;
+                    b.h = BULLET_SIZE;
+                    b.orbit = true;
+                    b.orbitCx = cx;
+                    b.orbitCy = cy;
+                    b.orbitRadius = radius + (i % 4) * 6;
+                    b.orbitAngle = (float)(i * Math.PI * 2 / n + rnd.nextFloat());
+                    b.orbitSpeed = (rnd.nextBoolean() ? 1 : -1) * (0.017f + rnd.nextFloat() * 0.012f);
+                    b.x = b.orbitCx + b.orbitRadius * (float)Math.cos(b.orbitAngle) - b.w / 2f;
+                    b.y = b.orbitCy + b.orbitRadius * (float)Math.sin(b.orbitAngle) - b.h / 2f;
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    markOrbitLifetime(b, now);
+                    bullets.add(b);
+                }
+            }
+            case 3 -> {
+                int cx = boxX + boxW / 2 - BULLET_SIZE / 2;
+                int cy = boxY + boxH / 2 - BULLET_SIZE / 2;
+                int rays = 12;
+                for (int i = 0; i < rays; i++) {
+                    Bullet b = new Bullet();
+                    double a = i * Math.PI * 2 / rays + rnd.nextDouble() * 0.35;
+                    double spd = 1.75 + rnd.nextDouble() * 0.65;
+                    b.x = cx;
+                    b.y = cy;
+                    b.w = BULLET_SIZE;
+                    b.h = BULLET_SIZE;
+                    b.vx = (float)(Math.cos(a) * spd);
+                    b.vy = (float)(Math.sin(a) * spd);
+                    b.bounce = false;
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    bullets.add(b);
+                }
+            }
+            case 4 -> {
+                for (int i = 0; i < 5; i++) {
+                    Bullet b = new Bullet();
+                    b.x = boxX + rnd.nextInt(Math.max(1, boxW - BULLET_SIZE));
+                    b.y = boxY + boxH + BULLET_SIZE;
+                    b.w = BULLET_SIZE;
+                    b.h = BULLET_SIZE;
+                    b.vx = (rnd.nextFloat() - 0.5f) * 1.2f;
+                    b.vy = -1.55f - rnd.nextFloat() * 0.55f;
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    bullets.add(b);
+                }
+            }
+            case 5 -> {
+                int corner = rnd.nextInt(4);
+                double angle = corner * Math.PI / 2 + rnd.nextDouble() * 0.7;
+                double spd = 2.05;
+                for (int k = 0; k < 4; k++) {
+                    Bullet b = new Bullet();
+                    if (corner == 0) { b.x = boxX; b.y = boxY; }
+                    else if (corner == 1) { b.x = boxX + boxW - BULLET_SIZE; b.y = boxY; }
+                    else if (corner == 2) { b.x = boxX + boxW - BULLET_SIZE; b.y = boxY + boxH - BULLET_SIZE; }
+                    else { b.x = boxX; b.y = boxY + boxH - BULLET_SIZE; }
+                    double da = angle + (k - 2) * 0.14;
+                    b.w = BULLET_SIZE;
+                    b.h = BULLET_SIZE;
+                    b.vx = (float)(Math.cos(da) * spd);
+                    b.vy = (float)(Math.sin(da) * spd);
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    bullets.add(b);
+                }
+            }
+            default -> {
+                for (int i = 0; i < 5; i++) {
+                    Bullet b = new Bullet();
+                    b.w = 18;
+                    b.h = 10;
+                    b.y = boxY + rnd.nextInt(Math.max(1, boxH - 20));
+                    b.vy = 0;
+                    b.x = rnd.nextBoolean() ? boxX - 30 : boxX + boxW + 30;
+                    b.vx = b.x < boxX + boxW / 2 ? 3.1f : -3.1f;
+                    b.imageIndex = bulletTrollImages.isEmpty() ? 0 : rnd.nextInt(bulletTrollImages.size());
+                    bullets.add(b);
+                }
+            }
         }
     }
 
@@ -936,7 +1198,8 @@ public class TrollBattleScene extends JPanel implements Scene {
             g2.fillRect(0, 0, w, h);
             String msg;
             if (hellMode) {
-                long seconds = Math.max(0, (now - battleStartTime) / 1000);
+                long ms = hellSurvivalFrozenMs >= 0 ? hellSurvivalFrozenMs : Math.max(0L, now - battleStartTime);
+                long seconds = ms / 1000;
                 msg = deathPhase == 0 ? ("You survived " + seconds + "s. Want to retry?") : (dialogueText != null ? dialogueText : "");
             } else {
                 if (allowGoldenItem) {
@@ -1156,7 +1419,226 @@ public class TrollBattleScene extends JPanel implements Scene {
         g2.setColor(new Color(120, 120, 110));
         g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 11f));
         g2.drawString("Arrow keys to move | Stay inside the box", w / 2 - 140, h - 25);
+        if (allowGoldenItem && !hellMode && victory && !victoryAskReplay) {
+            g2.setColor(new Color(210, 200, 170));
+            g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 12f));
+            g2.drawString("ESC: menu (Save / Load / Settings / History)", 12, h - 42);
+        }
+        if (pauseMenuVisible && allowGoldenItem && !hellMode && victory && !victoryAskReplay) {
+            paintVictoryPauseMenu(g2, w, h);
+        }
         g2.dispose();
+    }
+
+    private void handleVictoryPauseSave() {
+        StoryState state = GameState.getState();
+        state.setSavedChapter(1);
+        state.setCurrentScene("troll_cave_post_battle");
+        state.setTrollCaveDialogueIndex(getTrollCaveMainLineCount());
+        state.setPostBattleBlockIndex(0);
+        state.setPostBattleLineIndex(0);
+        state.setPostBattleBlackScreen(false);
+        int lastSlot = state.getLastUsedSaveSlot();
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Save (last used: Slot " + lastSlot + ")", Dialog.ModalityType.APPLICATION_MODAL);
+        JPanel grid = new JPanel(new GridLayout(2, 4, 8, 8));
+        for (int i = 1; i <= 8; i++) {
+            int slot = i;
+            JButton b = new JButton("Slot " + slot);
+            b.addActionListener(ev -> {
+                state.setLastUsedSaveSlot(slot);
+                try {
+                    SaveLoad.save(state, "saves/slot" + slot + ".dat");
+                    JOptionPane.showMessageDialog(TrollBattleScene.this, "Saved to slot " + slot);
+                    dialog.dispose();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(TrollBattleScene.this, "Save failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            grid.add(b);
+        }
+        JPanel main = new JPanel(new BorderLayout(8, 8));
+        main.add(grid, BorderLayout.CENTER);
+        main.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        dialog.setContentPane(main);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void handleVictoryPauseLoad() {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Load", Dialog.ModalityType.APPLICATION_MODAL);
+        JPanel grid = new JPanel(new GridLayout(2, 4, 8, 8));
+        for (int i = 1; i <= 8; i++) {
+            int slot = i;
+            int ch = SaveLoad.getSavedChapter("saves/slot" + slot + ".dat");
+            String label = ch == 0 ? "Slot " + slot : "Slot " + slot + " (Ch." + ch + ")";
+            JButton b = new JButton(label);
+            b.addActionListener(ev -> {
+                try {
+                    StoryState loaded = SaveLoad.load("saves/slot" + slot + ".dat");
+                    if (loaded == null) {
+                        JOptionPane.showMessageDialog(TrollBattleScene.this, "Empty slot " + slot);
+                        return;
+                    }
+                    if (loaded.getSavedChapter() >= 2) {
+                        JOptionPane.showMessageDialog(TrollBattleScene.this, "Chapter not available yet.", "Not Implemented", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    GameState.setState(loaded);
+                    dialog.dispose();
+                    pauseMenuVisible = false;
+                    if (gameTimer != null) gameTimer.stop();
+                    if (navigateAfterLoad != null) navigateAfterLoad.run();
+                    else JOptionPane.showMessageDialog(TrollBattleScene.this, "Load applied. Restart from main menu if needed.");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(TrollBattleScene.this, "Load failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            grid.add(b);
+        }
+        JPanel main = new JPanel(new BorderLayout(8, 8));
+        main.add(grid, BorderLayout.CENTER);
+        main.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        dialog.setContentPane(main);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void handleVictoryPauseSettings() {
+        float vol = StartScene.getMasterVolume();
+        JDialog d = new JDialog(SwingUtilities.getWindowAncestor(this), "Settings", Dialog.ModalityType.APPLICATION_MODAL);
+        JPanel p = new JPanel(new BorderLayout(10, 10));
+        p.setBackground(new Color(40, 40, 50));
+        JSlider slider = new JSlider(0, 100, (int) (vol * 100));
+        slider.setPaintLabels(true);
+        slider.setMajorTickSpacing(25);
+        slider.addChangeListener((ChangeListener) e -> {
+            if (!slider.getValueIsAdjusting()) StartScene.playVolumeTestDingAt(slider.getValue() / 100f);
+        });
+        JCheckBox muteMusic = new JCheckBox("Mute all music", StartScene.getMuteAllMusic());
+        JCheckBox muteSfx = new JCheckBox("Mute all sound effects", StartScene.getMuteAllSoundEffects());
+        muteMusic.setForeground(new Color(245, 245, 240));
+        muteMusic.setBackground(new Color(40, 40, 50));
+        muteSfx.setForeground(new Color(245, 245, 240));
+        muteSfx.setBackground(new Color(40, 40, 50));
+        JPanel checkPanel = new JPanel(new GridLayout(2, 1, 4, 4));
+        checkPanel.setOpaque(false);
+        checkPanel.add(muteMusic);
+        checkPanel.add(muteSfx);
+        JButton applyBtn = new JButton("Apply");
+        applyBtn.addActionListener(ev -> {
+            StartScene.setMasterVolume(slider.getValue() / 100f);
+            StartScene.setMuteAllMusic(muteMusic.isSelected());
+            StartScene.setMuteAllSoundEffects(muteSfx.isSelected());
+            if (battleMusicClip != null) StartScene.applyVolumeToClipForScene(battleMusicClip, true);
+            if (hellAmbienceClip != null) StartScene.applyVolumeToClipForScene(hellAmbienceClip, true, 0.18f);
+            d.dispose();
+        });
+        JLabel volLabel = new JLabel("Sound Volume");
+        volLabel.setForeground(new Color(250, 250, 240));
+        p.add(volLabel, BorderLayout.NORTH);
+        p.add(slider, BorderLayout.CENTER);
+        p.add(checkPanel, BorderLayout.SOUTH);
+        JPanel btnPanel = new JPanel();
+        btnPanel.setOpaque(false);
+        btnPanel.add(applyBtn);
+        p.add(btnPanel, BorderLayout.PAGE_END);
+        d.setContentPane(p);
+        d.pack();
+        d.setLocationRelativeTo(this);
+        d.setVisible(true);
+    }
+
+    private void handleVictoryPauseHistory() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("— Chapter One —\n");
+        for (DialogueRecord r : GameState.getState().getChapterOneHistory()) {
+            if (r.getSpeaker() == null || r.getSpeaker().isEmpty()) sb.append(r.getText()).append("\n");
+            else sb.append(r.getSpeaker()).append(": ").append(r.getText()).append("\n");
+        }
+        sb.append("\n— Troll Cave —\n");
+        for (DialogueRecord r : GameState.getState().getTrollCaveHistory()) {
+            if (r.getSpeaker() == null || r.getSpeaker().isEmpty()) sb.append(r.getText()).append("\n");
+            else sb.append(r.getSpeaker()).append(": ").append(r.getText()).append("\n");
+        }
+        JDialog d = new JDialog(SwingUtilities.getWindowAncestor(this), "History", Dialog.ModalityType.APPLICATION_MODAL);
+        d.getContentPane().setBackground(new Color(30, 28, 35));
+        JPanel wrap = new JPanel(new BorderLayout(12, 12));
+        wrap.setBackground(new Color(30, 28, 35));
+        wrap.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(212, 175, 55), 2),
+            BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        JTextArea area = new JTextArea(sb.length() > 0 ? sb.toString() : "No history yet.", 14, 42);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setForeground(new Color(240, 238, 230));
+        area.setBackground(new Color(45, 42, 50));
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.getViewport().setBackground(area.getBackground());
+        wrap.add(scroll, BorderLayout.CENTER);
+        JButton closeBtn = new JButton("Close");
+        closeBtn.addActionListener(ev -> d.dispose());
+        JPanel bp = new JPanel();
+        bp.setOpaque(false);
+        bp.add(closeBtn);
+        wrap.add(bp, BorderLayout.PAGE_END);
+        d.setContentPane(wrap);
+        d.pack();
+        d.setLocationRelativeTo(this);
+        d.setVisible(true);
+    }
+
+    private void paintVictoryPauseMenu(Graphics2D g2, int w, int h) {
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, w, h);
+        int panelW = (int) (w * 0.5), panelH = (int) (h * 0.55);
+        int px = (w - panelW) / 2, py = (h - panelH) / 2;
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        g2.setColor(new Color(40, 40, 40, 230));
+        g2.fillRoundRect(px, py, panelW, panelH, 18, 18);
+        g2.setStroke(new BasicStroke(3f));
+        g2.setColor(new Color(200, 160, 60));
+        g2.drawRoundRect(px + 1, py + 1, panelW - 2, panelH - 2, 18, 18);
+        int btnW = (int) (panelW * 0.7), btnH = (int) (panelH * 0.12);
+        int spacing = (panelH - btnH * 5) / 6;
+        int x = w / 2 - btnW / 2, y = py + spacing;
+        pauseSaveBounds.setBounds(x, y, btnW, btnH);
+        y += btnH + spacing;
+        pauseLoadBounds.setBounds(x, y, btnW, btnH);
+        y += btnH + spacing;
+        pauseSettingsBounds.setBounds(x, y, btnW, btnH);
+        y += btnH + spacing;
+        pauseHistoryBounds.setBounds(x, y, btnW, btnH);
+        y += btnH + spacing;
+        pauseQuitBounds.setBounds(x, y, btnW, btnH);
+        paintVictoryPauseBtn(g2, pauseSaveBounds, "Save", hoverPauseSave, pressedPauseSave);
+        paintVictoryPauseBtn(g2, pauseLoadBounds, "Load", hoverPauseLoad, pressedPauseLoad);
+        paintVictoryPauseBtn(g2, pauseSettingsBounds, "Settings", hoverPauseSettings, pressedPauseSettings);
+        paintVictoryPauseBtn(g2, pauseHistoryBounds, "History", hoverPauseHistory, pressedPauseHistory);
+        paintVictoryPauseBtn(g2, pauseQuitBounds, "Quit to Title", hoverPauseQuit, pressedPauseQuit);
+    }
+
+    private void paintVictoryPauseBtn(Graphics2D g2, Rectangle r, String text, boolean hover, boolean pressed) {
+        double scale = pressed ? 0.96 : 1.0;
+        int cw = (int) (r.width * scale), ch = (int) (r.height * scale);
+        int cx = r.x + (r.width - cw) / 2, cy = r.y + (r.height - ch) / 2;
+        g2.setColor(new Color(10, 60, 110));
+        g2.fillRoundRect(cx, cy, cw, ch, 16, 16);
+        g2.setStroke(new BasicStroke(3f));
+        g2.setColor(new Color(200, 160, 60));
+        g2.drawRoundRect(cx, cy, cw, ch, 16, 16);
+        g2.setColor(new Color(245, 245, 240));
+        FontMetrics fm = g2.getFontMetrics();
+        g2.drawString(text, cx + (cw - fm.stringWidth(text)) / 2, cy + (ch + fm.getAscent()) / 2);
+        if (hover || pressed) {
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pressed ? 0.4f : 0.2f));
+            g2.setColor(new Color(0x1E90FF));
+            g2.fillRoundRect(cx, cy, cw, ch, 16, 16);
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        }
     }
 
     private void drawHeart(Graphics2D g2, int x, int y, int w, int h) {
@@ -1188,6 +1670,8 @@ public class TrollBattleScene extends JPanel implements Scene {
         float driftRotSpeed = 0;
         boolean orbit;
         float orbitCx, orbitCy, orbitAngle, orbitSpeed, orbitRadius;
+        /** Orbit bullets removed after this time (ms since epoch); 0 = unused. */
+        long orbitDieAt;
     }
 
     private static class GoldenItem {

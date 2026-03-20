@@ -158,7 +158,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         forestMusicClip = StartScene.loadMusicFromMusicDir("map.wav");
         if (forestMusicClip == null) forestMusicClip = StartScene.loadMusicFromMusicDir("map.mp3");
         if (forestMusicClip != null) {
-            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
+            StartScene.applyVolumeToClipForSceneNoFloor(forestMusicClip, true);
             forestMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
             forestMusicClip.start();
         }
@@ -783,7 +783,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
             StartScene.setMasterVolume(slider.getValue() / 100f);
             StartScene.setMuteAllMusic(muteMusicCheck.isSelected());
             StartScene.setMuteAllSoundEffects(muteSfxCheck.isSelected());
-            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
+            StartScene.applyVolumeToClipForSceneNoFloor(forestMusicClip, true);
             d.dispose();
         });
         JLabel volLabel = new JLabel("Sound Volume");
@@ -935,7 +935,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.wav");
             if (forestMusicClip == null) forestMusicClip = StartScene.loadMusicFromMusicDir("beginforest.mp3");
         if (forestMusicClip != null) {
-            StartScene.applyVolumeToClipForScene(forestMusicClip, true);
+            StartScene.applyVolumeToClipForSceneNoFloor(forestMusicClip, true);
             forestMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
             forestMusicClip.start();
         }

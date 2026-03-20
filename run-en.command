@@ -1,7 +1,6 @@
 #!/bin/bash
-# macOS：在访达中双击本文件，会在终端中编译并启动游戏。
-# 首次运行若被拦截：右键本文件 →「打开」，或见 README「macOS 安全与权限」。
-# English launcher: use run-en.command
+# English macOS double-click launcher (Terminal opens, compiles, runs the game).
+# First launch: Right-click this file → Open. If blocked, see README → macOS security.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -11,29 +10,29 @@ if [ ! -d out ]; then
 fi
 
 echo "========================================="
-echo "  memetale RPG — 启动器"
+echo "  memetale RPG — launcher"
 echo "========================================="
 echo ""
-echo "工作目录: $SCRIPT_DIR"
+echo "Working directory: $SCRIPT_DIR"
 echo ""
 
 JAVA_HOME_18="/Library/Java/JavaVirtualMachines/jdk-18.0.2.1.jdk/Contents/Home"
 if [ -d "$JAVA_HOME_18" ]; then
     export JAVA_HOME="$JAVA_HOME_18"
     export PATH="$JAVA_HOME/bin:$PATH"
-    echo "使用 Java 18: $JAVA_HOME"
+    echo "Using Java 18: $JAVA_HOME"
     echo ""
 else
-    echo "使用系统默认 Java"
+    echo "Using system default Java"
     echo ""
 fi
 
-echo "正在清理旧编译文件…"
+echo "Cleaning old build output..."
 rm -rf out/game
-echo "完成。"
+echo "Done."
 echo ""
 
-echo "正在编译 Java…"
+echo "Compiling..."
 JAVAC_BIN="${JAVA_HOME:-}/bin/javac"
 if [ -x "$JAVAC_BIN" ]; then
     "$JAVAC_BIN" -encoding UTF-8 --release 18 -d out -sourcepath src \
@@ -44,15 +43,15 @@ else
 fi
 if [ $? -ne 0 ]; then
     echo ""
-    echo "编译失败。"
+    echo "Compilation failed."
     echo ""
-    read -p "按回车键关闭窗口…"
+    read -p "Press Enter to close..."
     exit 1
 fi
 
-echo "编译成功。"
+echo "Compilation OK."
 echo ""
-echo "正在启动游戏…"
+echo "Starting game..."
 echo ""
 
 JAVA_BIN="${JAVA_HOME:-}/bin/java"
@@ -65,10 +64,10 @@ EXIT_CODE=$?
 
 echo ""
 if [ $EXIT_CODE -eq 0 ]; then
-    echo "游戏已正常退出。"
+    echo "Game exited normally."
 else
-    echo "游戏退出，代码: $EXIT_CODE"
+    echo "Game exited with code: $EXIT_CODE"
 fi
 echo ""
-read -p "按回车键关闭窗口…"
+read -p "Press Enter to close..."
 exit $EXIT_CODE

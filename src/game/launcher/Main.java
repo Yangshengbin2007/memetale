@@ -97,6 +97,20 @@ public class Main {
 				ChapterOneScene.setSkipQuoteNextEnter(true);
 				sceneManager.setScene(chapterOne);
 			});
+			Runnable navigateBySavedScene = () -> {
+				StoryState st = GameState.getState();
+				String k = st == null ? null : st.getCurrentScene();
+				if ("forest_entrance".equals(k)) sceneManager.setScene(forestEntranceScene);
+				else if ("troll_cave".equals(k)) sceneManager.setScene(trollCaveScene);
+				else if ("forest_overworld_map".equals(k)) sceneManager.setScene(forestOverworldMapScene);
+				else if ("troll_cave_post_battle".equals(k)) sceneManager.setScene(trollCavePostBattleScene);
+				else if ("chapter_one".equals(k)) {
+					ChapterOneScene.setSkipQuoteNextEnter(true);
+					sceneManager.setScene(chapterOne);
+				} else sceneManager.setScene(chapterOne);
+			};
+			trollBattleScene.setNavigateAfterLoad(navigateBySavedScene);
+			trollCavePostBattleScene.setNavigateAfterLoad(navigateBySavedScene);
 			startScene.setOnStartGame(() -> {
 				StoryState st = GameState.getState();
 				String sceneKey = st == null ? null : st.getCurrentScene();

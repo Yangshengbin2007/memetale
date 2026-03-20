@@ -1,123 +1,165 @@
-# memetale rpg
-# A clichéd story, told in a different way.
-In the distant land，memetale, the princess has been captured by an evil dragon. As the prince, you must defeat the dragon and rescue the princess.
-Gameplay: RPG game
-The gameplay involves exploring different caves based on the hints provided (there are save points), and the choices you make in these caves determine your ending (there may be bad endings).
+# memetale RPG
 
-In this mystery adventure game, players gradually uncover the truth of the world by talking to people, engaging in conversations, and solving puzzles and mini-games. The game features multiple endings, including one true ending and two hidden endings.
+**A clichéd story, told in a different way.**
 
-"When you have to make a choice, don't let yourself regret it."
-![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/5a40e06b-234c-4ddd-9f3f-7a05cb231185.png)
-#game cg
-![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20one/gamecg1.jpg)
-![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/choose%20your%20way.jpg)
-![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Two/seeashark.jpg)
-![running app](https://github.com/Yangshengbin2007/Jerry-advprogramming2026-Individual-project-Repo/blob/main/image/Chapter%20Three/goodendcg.jpg)
-![running app](https://github.com/Yangshengbin2007/memetale/blob/main/image/start.jpg)
+In the distant land of *memetale*, the princess has been taken by an evil dragon. As the prince, you explore, talk, choose, and sometimes fight—your decisions shape which ending you see (including bad ends).
 
-## Gameplay Overview
+> *When you have to make a choice, don’t let yourself regret it.*
 
-- **Genre**: Story-driven RPG with mystery and puzzle elements.
-- **Core Loop**:
-  - Explore different areas and caves based on hints.
-  - Talk to NPCs, collect information, and unlock new paths.
-  - Solve puzzles and play mini-games to progress the story.
-  - Make impactful choices that branch the storyline.
-- **Progression**:
-  - Multiple chapters/areas with save points.
-  - Each key choice affects your relationship with the world and leads to different routes.
-- **Endings**:
-  - 1 true ending that reveals the full truth of memetale.
-  - 2 hidden endings for players who explore deeply and make specific choices.
-  - Multiple bad endings if you ignore warnings or make reckless decisions.
-- **Theme**:
-  - "When you have to make a choice, don't let yourself regret it."
+This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves, settings, mini-games, and bullet-hell style battles. A longer design outline lives in [`story-outline.md`](story-outline.md).
 
-## How to Run
+---
 
-### Prerequisites
-- Java 18 or later installed
-- macOS, Windows, or Linux
+## Screenshots
 
-### Running the Game
+<p align="center">
+  <img src="image/Chapter%20one/start.jpg" alt="Title / start screen" width="45%" />
+  &nbsp;
+  <img src="image/Chapter%20one/cg2.jpg" alt="Chapter one CG" width="45%" />
+</p>
 
-**macOS:**
-1. Double-click `run.command` (first time: right-click → Open)
-2. Or in Terminal: `./run.command`
+<p align="center">
+  <img src="image/Chapter%20one/forest1.jpg" alt="Forest scene" width="45%" />
+  &nbsp;
+  <img src="image/Chapter%20one/map1forest.jpg" alt="Overworld map" width="45%" />
+</p>
 
-**Windows:**
-1. Double-click `run.bat`
-2. Or in Command Prompt: `run.bat`
+<p align="center">
+  <img src="image/choose%20your%20way.jpg" alt="Choices" width="60%" />
+</p>
 
-**Linux:**
-1. In Terminal: `./run.sh`
-2. Or: `bash run.sh`
+*(Chapter Two / Three art and extra CGs ship with the `image/` folder as you add them.)*
 
-The script will automatically compile and run the game.
+---
 
-### Manual Compilation (if needed)
+## Requirements
+
+| Item | Notes |
+|------|--------|
+| **Java** | **JDK 18** (recommended). Scripts use `--release 18`. |
+| **OS** | Windows, macOS, or Linux |
+| **Folders** | Keep repo layout: `src/`, `image/`, `music/` (and `saves/` created at runtime) |
+
+Optional: On macOS, if you have Oracle JDK 18 at the path used in the scripts (`jdk-18.0.2.1.jdk`), it is picked automatically; otherwise the system `java` / `javac` is used.
+
+---
+
+## How to run
+
+### Quick reference
+
+| Platform | 中文启动 | English launcher |
+|----------|-----------|------------------|
+| **macOS (double-click)** | `run.command` | `run-en.command` |
+| **macOS / Linux (terminal)** | `./run.sh` | `./run-en.sh` |
+| **Windows** | `run.bat` | `run-en.bat` |
+
+First time on Mac/Linux, you may need:
+
 ```bash
-# Compile
-javac -encoding UTF-8 -d out -sourcepath src src/game/launcher/Main.java
+chmod +x run.sh run.command run-en.sh run-en.command
+```
 
-# Run
+Scripts **clean `out/game`**, **compile** `Main.java` + `TrollCaveData.java`, then **run** `game.launcher.Main`.
+
+### Manual compile (if you prefer)
+
+```bash
+mkdir -p out
+javac -encoding UTF-8 --release 18 -d out -sourcepath src \
+  src/game/launcher/Main.java \
+  src/game/model/forest/TrollCaveData.java
 java -cp out game.launcher.Main
 ```
 
-## Current Working Features
+Windows: same `javac` / `java` lines in `cmd`, paths with `\`.
 
-### ✅ Implemented Features
-- **Main Menu System**
-  - Start Game button
-  - Continue/Load Game functionality
-  - Settings (volume control, mute options)
-  - Mini Games collection menu
-  - Quit option
+---
 
-- **Chapter One - Meme Forest**
-  - Full dialogue system with typewriter effect
-  - Multiple CG (background) transitions
-  - Character dialogue with speaker names
-  - Click-to-advance dialogue
-  - Space key for quick advance
-  - Chapter title sequence
+## macOS security & permissions (common issues)
 
-- **Save/Load System**
-  - Save to 8 different slots
-  - Load from saved slots
-  - Delete save slots
-  - Chapter progress tracking
+Apple often blocks **downloaded** scripts or apps that are not notarized. You may see messages like *“cannot be opened because the developer cannot be verified”* or *“malware”* for a local script. Three practical fixes:
 
-- **Settings**
-  - Master volume control
-  - Mute music option
-  - Mute sound effects option
-  - Volume test preview
+### 1. Open the launcher the “safe” way (recommended)
 
-- **Audio System**
-  - Background music (BGM) for different scenes
-  - Sound effects (button clicks, dialogue sounds)
-  - Volume control integration
-  - Audio file loading from resources
+- **Finder** → select `run.command` or `run-en.command`  
+- **Right-click → Open** (not double-click the first time)  
+- Confirm **Open** in the dialog  
 
-- **Scene Management**
-  - Scene switching system
-  - Fade in/out transitions
-  - Scene stack for navigation
+This whitelists that file for your user.
 
-- **Game State Management**
-  - Story state tracking
-  - Dialogue history
-  - Chapter progress
-  - Flag system for choices
+### 2. Remove the quarantine flag (if Terminal still blocks scripts)
 
-### 🚧 In Progress / Planned
-- Chapter Two and Three
-- Multiple endings implementation
-- Mini-games collection
-- More dialogue branches
-- Additional CGs and assets
+In **Terminal**, `cd` to the **project root** (where `run.command` lives), then:
 
-## Story Outline
+```bash
+xattr -cr .
+```
 
-A detailed story outline for **memetale rpg** — including chapter structure, key choices, endings, and meme references — is maintained in `story-outline.md`.
+Or only the script:
+
+```bash
+xattr -d com.apple.quarantine run.command 2>/dev/null
+xattr -d com.apple.quarantine run-en.command 2>/dev/null
+```
+
+Then `chmod +x run.command run-en.command` and try again.
+
+### 3. Executable bit for `.sh` / `.command`
+
+```bash
+chmod +x run.sh run-en.sh run.command run-en.command
+```
+
+If **Gatekeeper** still complains, use **System Settings → Privacy & Security** and look for an **“Allow anyway”** line right after a blocked attempt—or run the game via Terminal with `./run.sh` after `xattr -cr .`.
+
+> **Note:** Disabling Gatekeeper globally (`spctl --master-disable`) is **not** recommended; the steps above are enough for a local dev project.
+
+---
+
+## Controls & UX (Chapter One + forest flow)
+
+- **Dialogue**: click / **Space**; hold **Space** to fast-forward (where implemented).  
+- **Pause / menu**: **Esc** — Save, Load, Settings, History, Quit (scene-dependent).  
+- **Troll battle**: arrow keys to move the heart inside the box; hell mode shows a frozen survival time after game over.  
+- **Saves**: 8 slots under `saves/`; progress includes scene ID and dialogue indices.
+
+---
+
+## What’s implemented (high level)
+
+- Main menu: start, continue, settings (volume / mute), mini-game hub, quit.  
+- **Chapter One** intro flow, quotes, and transition into the world.  
+- **Forest / map**: exploration landmarks, dialogue, BGM, Esc menu + history.  
+- **Troll cave** (dialogue) → **boss battle** (normal + optional difficulty relief on story loss) → **post-battle** story → return to map.  
+- Save / load / delete saves; dialogue history lists for menus.  
+- Mini-game collection entry (including hell / normal troll battle variants where wired in `Main`).
+
+Planned / WIP: later chapters, more endings, extra branches and assets (see `story-outline.md`).
+
+---
+
+## Project layout (short)
+
+```
+src/game/          — Java sources (launcher, scenes, model, io)
+image/             — Backgrounds, CGs, UI art (chapter subfolders)
+music/             — BGM / SFX (wav/mp3 as loaded by code)
+saves/             — Created when you save in-game
+out/               — Build output (generated; safe to delete)
+run*.sh / run*.command / run*.bat — Launchers (CN + EN pairs)
+```
+
+---
+
+## 中文简要说明
+
+- **运行**：macOS 双击 `run.command`（英文界面用 `run-en.command`）；终端可用 `./run.sh` / `./run-en.sh`；Windows 用 `run.bat` / `run-en.bat`。  
+- **权限**：若提示无法验证开发者，请 **右键 → 打开**；仍不行则在项目根目录执行 `xattr -cr .`，并 `chmod +x run.command run.sh` 等。  
+- **环境**：需要 **Java 18**，脚本会自动编译并启动游戏。
+
+---
+
+## License / credits
+
+Course / individual project for advanced programming; assets and story belong to the author. Update this section if you add a formal license.
