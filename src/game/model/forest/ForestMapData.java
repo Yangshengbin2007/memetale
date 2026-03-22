@@ -8,10 +8,10 @@ package game.model.forest;
 public final class ForestMapData {
     private ForestMapData() {}
 
-    /** 每行: speaker, text, princeExpr, darabongbaExpr */
+    // 每行: speaker, text, princeExpr, darabongbaExpr
     public static final String[][] LINES = {
         {"", "Prince pulls out a map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Prince", "Alright. According to the king… the dragon flew this way.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
+        {"Prince", "Alright. According to the king... the dragon flew this way.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"", "Darabongba squints.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "This map looks suspicious.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Why?", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
@@ -28,7 +28,7 @@ public final class ForestMapData {
         {"Prince", "Motivation for what?", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "Not going there.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"", "Prince sighs.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Prince", "Alright… first stop on our list.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
+        {"Prince", "Alright... first stop on our list.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"", "Prince points at the map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Prince", "\"Troll Cave.\" That's where we're heading first.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "Hard pass. I've seen enough internet comments to last a lifetime.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
@@ -51,7 +51,7 @@ public final class ForestMapData {
         {"Prince", "That sounds fake.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "So does half this map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "What's inside the shrine?", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "Rumor says… treasure.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
+        {"Darabongba", "Rumor says... treasure.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Good.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "Also memes.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Less useful.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
@@ -63,20 +63,8 @@ public final class ForestMapData {
         {"Prince", "Good question.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "Does the dragon listen to podcasts?", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Maybe battle strategy podcasts.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "\"How to Kidnap Princesses — Episode 12.\"", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
+        {"Darabongba", "\"How to Kidnap Princesses - Episode 12.\"", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Not helpful.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
-        {"", "Prince points lower.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Prince", "Merchant Camp.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"", "Darabongba nods seriously.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "Now that is dangerous.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
-        {"Prince", "More dangerous than trolls?", ForestEntranceData.EXPR_SURPRISE, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "Way more.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
-        {"Prince", "Why?", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "Merchants will sell you your own sword.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
-        {"Prince", "At least they sell things.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "At triple price.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
-        {"Prince", "That's illegal.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
-        {"Darabongba", "That's capitalism.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"", "Prince rubs his forehead.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Prince", "Next location.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"", "Prince points to the edge of the map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
@@ -94,6 +82,11 @@ public final class ForestMapData {
         {"Prince", "You fell out of a tree ten minutes ago.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "A philosophical tree.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"Prince", "Focus.", ForestEntranceData.EXPR_ANNOYED, ForestEntranceData.EXPR_DEFAULT},
+        {"", "Prince taps another doodle on the parchment.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
+        {"Prince", "\"Gigachad Arena.\"", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
+        {"Darabongba", "That sounds like a gym for people who yell at mirrors.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
+        {"Prince", "Or a tournament.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
+        {"Darabongba", "Same thing.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
         {"", "Prince studies the map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Prince", "There's something scribbled here.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Darabongba", "What does it say?", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
@@ -133,25 +126,23 @@ public final class ForestMapData {
         {"Darabongba", "Good. We're finally thinking the same way.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
     };
 
-    /** 当前阶段第一站目的地（点别的会提示 This isn't our destination） */
+    // 当前阶段第一站为 troll_cave；点其他地标会提示走错路（英文提示见 ForestEntranceScene）。
     public static final String FIRST_DESTINATION_LANDMARK_ID = "troll_cave";
 
-    /** 选点阶段可点击的地标 id（与 ForestOverworldMapScene 顺序一致）。 */
+    // 选点阶段可点击的地标 id，顺序须与 ForestOverworldMapScene 一致。
     public static final String[] CHOICE_LANDMARK_IDS = {
-        "troll_cave", "doge_shrine", "radio_tower", "merchant_camp", "waterfall", "mushroom_ring", "gigachad_arena"
+        "troll_cave", "waterfall", "radio_tower", "doge_shrine", "gigachad_arena"
     };
     public static final String[] CHOICE_LANDMARK_NAMES = {
-        "Troll Cave", "Doge Shrine", "Radio Tower", "Merchant Camp", "Waterfall", "Mushroom Ring", "Gigachad Arena"
+        "Troll Cave", "Waterfall", "Radio Tower", "Doge Shrine", "Gigachad Arena"
     };
 
-    /** 选点阶段各地标在 800x600 下的区域 [x, y, w, h]。Mushroom Ring 与 Radio Tower 对调，Troll Cave 与 Radio Tower 对调，Gigachad 右下。 */
+    // 选点阶段各地标在 800x600 下的矩形 x,y,w,h；顺序同 CHOICE_LANDMARK_IDS。
     public static final int[][] CHOICE_BOUNDS_800x600 = {
-        {80, 120, 110, 70},   // troll_cave
-        {340, 60, 100, 75},   // doge_shrine
-        {580, 180, 100, 70},  // radio_tower
-        {340, 380, 120, 75},  // merchant_camp
-        {600, 320, 100, 80},  // waterfall
-        {120, 360, 100, 80},  // mushroom_ring
-        {570, 460, 140, 90}   // gigachad_arena
+        {80, 120, 110, 70},
+        {600, 320, 100, 80},
+        {580, 180, 100, 70},
+        {120, 360, 100, 80},
+        {340, 60, 100, 75}
     };
 }

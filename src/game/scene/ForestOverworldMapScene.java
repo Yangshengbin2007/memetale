@@ -70,12 +70,10 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
 
     private void initLandmarks() {
         landmarks.add(new Landmark("troll_cave", "Troll Cave", 80, 120, 110, 70));
-        landmarks.add(new Landmark("doge_shrine", "Doge Shrine", 340, 60, 100, 75));
-        landmarks.add(new Landmark("radio_tower", "Radio Tower", 580, 180, 100, 70));
-        landmarks.add(new Landmark("merchant_camp", "Merchant Camp", 340, 380, 120, 75));
         landmarks.add(new Landmark("waterfall", "Waterfall", 600, 320, 100, 80));
-        landmarks.add(new Landmark("mushroom_ring", "Mushroom Ring", 120, 360, 100, 80));
-        landmarks.add(new Landmark("gigachad_arena", "Gigachad Arena", 570, 460, 140, 90));
+        landmarks.add(new Landmark("radio_tower", "Radio Tower", 580, 180, 100, 70));
+        landmarks.add(new Landmark("doge_shrine", "Doge Shrine", 120, 360, 100, 80));
+        landmarks.add(new Landmark("gigachad_arena", "Gigachad Arena", 340, 60, 100, 75));
     }
 
     private void loadImage() {

@@ -21,11 +21,9 @@ public class ForestLandmarkScene extends JPanel implements Scene {
     /** 各地标对应的背景图文件名（无则留 null，画占位） */
     private static String bgFileForLandmark(String id) {
         switch (id) {
-            case "mushroom_ring":    return "mushroom_ring.png";
             case "doge_shrine":      return "doge_shrine.png";
             case "troll_cave":       return "troll_cave.png";
             case "radio_tower":      return "radio_tower.png";
-            case "merchant_camp":    return "merchant_camp.png";
             case "waterfall":        return "waterfall.png";
             case "gigachad_arena":   return "gigachad_arena.png";
             default:                 return null;
