@@ -113,7 +113,7 @@ public class TrollBattleScene extends JPanel implements Scene {
     private static final int ANGRY_REACTION_MS = 1500;
     /** Main story phase 3 frenzy spawn window (seconds of dense bullets). */
     private static final int PHASE3_SPAWN_MS = 5000;
-    private static final int ORBIT_LIFETIME_MS = 10000;
+    private static final int ORBIT_LIFETIME_MS = 5000;
     private boolean phase3SpawnStopped = false;
     private Image topTrollDefault, topTrollLaugh, topTrollScared, topTrollDefeat, topTrollAngry;
     private final List<Image> bulletTrollImages = new ArrayList<>();
