@@ -29,10 +29,10 @@ JAVAC_BIN="${JAVA_HOME:-}/bin/javac"
 JAVA_BIN="${JAVA_HOME:-}/bin/java"
 if [ -x "$JAVAC_BIN" ]; then
     "$JAVAC_BIN" -encoding UTF-8 --release 18 -d out -sourcepath src \
-        src/game/launcher/Main.java src/game/model/forest/TrollCaveData.java
+        src/game/launcher/Main.java src/game/model/forest/ForestMapData.java src/game/model/forest/TrollCaveData.java
 else
     javac -encoding UTF-8 --release 18 -d out -sourcepath src \
-        src/game/launcher/Main.java src/game/model/forest/TrollCaveData.java
+        src/game/launcher/Main.java src/game/model/forest/ForestMapData.java src/game/model/forest/TrollCaveData.java
 fi
 if [ $? -ne 0 ]; then
     echo "编译失败。"

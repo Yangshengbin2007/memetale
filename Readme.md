@@ -29,7 +29,6 @@ This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves
 </p>
 
 
-
 ---
 
 ## Requirements
@@ -60,7 +59,7 @@ First time on Mac/Linux, you may need:
 chmod +x run.sh run.command run-en.sh run-en.command
 ```
 
-Scripts **clean `out/game`**, **compile** `Main.java` + `TrollCaveData.java`, then **run** `game.launcher.Main`.
+Scripts **clean `out/game`**, **compile** `Main.java` + forest data classes, then **run** `game.launcher.Main`.
 
 ### Manual compile (if you prefer)
 
@@ -68,6 +67,7 @@ Scripts **clean `out/game`**, **compile** `Main.java` + `TrollCaveData.java`, th
 mkdir -p out
 javac -encoding UTF-8 --release 18 -d out -sourcepath src \
   src/game/launcher/Main.java \
+  src/game/model/forest/ForestMapData.java \
   src/game/model/forest/TrollCaveData.java
 java -cp out game.launcher.Main
 ```
