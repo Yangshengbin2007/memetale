@@ -21,6 +21,8 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
     private final SceneManager sceneManager;
     /** After Doge ending sequence: clear stack and return to title (wired from Main). */
     private final Runnable onDogeArcCompleteToTitle;
+    /** Shared epilogue scene instance (pushed after {@link DogeShrineLazyScene}; wired from Main). */
+    private final Scene dragonEpilogueScene;
     private Clip mapMusicClip;
     /** After Troll Cave + Doge done: click Troll = "We've been there"; click other = "We're going..." then black then go. */
     private static final int PHASE_NORMAL = 0;
@@ -62,9 +64,10 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
         }
     }
 
-    public ForestOverworldMapScene(SceneManager sceneManager, Runnable onDogeArcCompleteToTitle) {
+    public ForestOverworldMapScene(SceneManager sceneManager, Runnable onDogeArcCompleteToTitle, Scene dragonEpilogueScene) {
         this.sceneManager = sceneManager;
         this.onDogeArcCompleteToTitle = onDogeArcCompleteToTitle != null ? onDogeArcCompleteToTitle : () -> {};
+        this.dragonEpilogueScene = dragonEpilogueScene;
         setBackground(new Color(25, 50, 25));
         initLandmarks();
         loadImage();
@@ -74,7 +77,7 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
     private void openLandmark(Landmark lm) {
         if (lm == null || sceneManager == null) return;
         if ("doge_shrine".equals(lm.id)) {
-            sceneManager.pushScene(new DogeShrineLazyScene(sceneManager, onDogeArcCompleteToTitle));
+            sceneManager.pushScene(new DogeShrineLazyScene(sceneManager, onDogeArcCompleteToTitle, dragonEpilogueScene));
         } else {
             sceneManager.pushScene(new ForestLandmarkScene(lm, () -> sceneManager.popScene()));
         }

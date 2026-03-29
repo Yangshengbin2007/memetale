@@ -49,19 +49,31 @@ public class Main {
 				() -> sceneManager.setScene(miniGameCollectionScene));
 			miniGameCollectionScene.setLaunchTrollBattle(() -> sceneManager.setScene(trollBattleMinigameNormal),
 				() -> sceneManager.setScene(trollBattleMinigameHell));
-			ForestOverworldMapScene forestOverworldMapScene = new ForestOverworldMapScene(sceneManager, () -> {
+			final ForestOverworldMapScene[] forestHolder = new ForestOverworldMapScene[1];
+			final DragonReunionEndingScene[] dragonHolder = new DragonReunionEndingScene[1];
+			final Runnable[] navigateHolder = new Runnable[1];
+			dragonHolder[0] = new DragonReunionEndingScene(
+				() -> {
+					startScene.setSkipJerryNextEnter(true);
+					sceneManager.clearStackAndSetScene(startScene);
+				},
+				() -> {
+					if (navigateHolder[0] != null) navigateHolder[0].run();
+				}
+			);
+			forestHolder[0] = new ForestOverworldMapScene(sceneManager, () -> {
 				startScene.setSkipJerryNextEnter(true);
 				sceneManager.clearStackAndSetScene(startScene);
-			});
+			}, dragonHolder[0]);
 			ForestEntranceScene forestEntranceScene = new ForestEntranceScene(
-				() -> sceneManager.setScene(forestOverworldMapScene),
+				() -> sceneManager.setScene(forestHolder[0]),
 				() -> {
 					startScene.setSkipJerryNextEnter(true);
 					sceneManager.setScene(startScene);
 				}
 			);
 			TrollCavePostBattleScene trollCavePostBattleScene = new TrollCavePostBattleScene(
-				() -> sceneManager.setScene(forestOverworldMapScene),
+				() -> sceneManager.setScene(forestHolder[0]),
 				() -> {
 					startScene.setSkipJerryNextEnter(true);
 					sceneManager.setScene(startScene);
@@ -86,7 +98,7 @@ public class Main {
 				if ("troll_cave".equals(landmarkId)) {
 					sceneManager.setScene(trollCaveScene);
 				} else {
-					sceneManager.setScene(forestOverworldMapScene);
+					sceneManager.setScene(forestHolder[0]);
 				}
 			});
 			ChapterOneScene chapterOne = new ChapterOneScene(
@@ -100,20 +112,23 @@ public class Main {
 				ChapterOneScene.setSkipQuoteNextEnter(true);
 				sceneManager.setScene(chapterOne);
 			});
-			Runnable navigateBySavedScene = () -> {
+			navigateHolder[0] = () -> {
 				StoryState st = GameState.getState();
 				String k = st == null ? null : st.getCurrentScene();
 				if ("forest_entrance".equals(k)) sceneManager.setScene(forestEntranceScene);
 				else if ("troll_cave".equals(k)) sceneManager.setScene(trollCaveScene);
-				else if ("forest_overworld_map".equals(k)) sceneManager.setScene(forestOverworldMapScene);
+				else if ("forest_overworld_map".equals(k)) sceneManager.setScene(forestHolder[0]);
 				else if ("troll_cave_post_battle".equals(k)) sceneManager.setScene(trollCavePostBattleScene);
-				else if ("chapter_one".equals(k)) {
+				else if ("dragon_reunion_ending".equals(k)) {
+					dragonHolder[0].setRestoreOnNextEnter(true);
+					sceneManager.setScene(dragonHolder[0]);
+				} else if ("chapter_one".equals(k)) {
 					ChapterOneScene.setSkipQuoteNextEnter(true);
 					sceneManager.setScene(chapterOne);
 				} else sceneManager.setScene(chapterOne);
 			};
-			trollBattleScene.setNavigateAfterLoad(navigateBySavedScene);
-			trollCavePostBattleScene.setNavigateAfterLoad(navigateBySavedScene);
+			trollBattleScene.setNavigateAfterLoad(navigateHolder[0]);
+			trollCavePostBattleScene.setNavigateAfterLoad(navigateHolder[0]);
 			startScene.setOnStartGame(() -> {
 				StoryState st = GameState.getState();
 				String sceneKey = st == null ? null : st.getCurrentScene();
@@ -126,11 +141,16 @@ public class Main {
 					return;
 				}
 				if ("forest_overworld_map".equals(sceneKey)) {
-					sceneManager.setScene(forestOverworldMapScene);
+					sceneManager.setScene(forestHolder[0]);
 					return;
 				}
 				if ("troll_cave_post_battle".equals(sceneKey)) {
 					sceneManager.setScene(trollCavePostBattleScene);
+					return;
+				}
+				if ("dragon_reunion_ending".equals(sceneKey)) {
+					dragonHolder[0].setRestoreOnNextEnter(true);
+					sceneManager.setScene(dragonHolder[0]);
 					return;
 				}
 				sceneManager.setScene(chapterOne);

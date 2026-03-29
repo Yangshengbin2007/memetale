@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class StoryState implements Serializable {
-    private static final long serialVersionUID = 5L;
+    private static final long serialVersionUID = 6L;
 
     // simple flag storage; can be expanded
     private final Map<String, Boolean> flags = new HashMap<>();
@@ -100,6 +100,21 @@ public class StoryState implements Serializable {
 
     public int getSavedChapter() { return savedChapter; }
     public void setSavedChapter(int savedChapter) { this.savedChapter = Math.max(1, Math.min(3, savedChapter)); }
+
+    /** Epilogue scene progress when {@link #currentScene} is {@code dragon_reunion_ending}. */
+    private int dragonEpiloguePhase;
+    private int dragonEpilogueMainIndex;
+    private int dragonEpilogueCreditIndex;
+    private int dragonEpilogueExtraIndex;
+
+    public int getDragonEpiloguePhase() { return dragonEpiloguePhase; }
+    public void setDragonEpiloguePhase(int v) { this.dragonEpiloguePhase = Math.max(0, Math.min(3, v)); }
+    public int getDragonEpilogueMainIndex() { return dragonEpilogueMainIndex; }
+    public void setDragonEpilogueMainIndex(int v) { this.dragonEpilogueMainIndex = Math.max(0, v); }
+    public int getDragonEpilogueCreditIndex() { return dragonEpilogueCreditIndex; }
+    public void setDragonEpilogueCreditIndex(int v) { this.dragonEpilogueCreditIndex = Math.max(0, v); }
+    public int getDragonEpilogueExtraIndex() { return dragonEpilogueExtraIndex; }
+    public void setDragonEpilogueExtraIndex(int v) { this.dragonEpilogueExtraIndex = Math.max(0, v); }
 
     @Override
     public String toString() {

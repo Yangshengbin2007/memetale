@@ -14,15 +14,17 @@ public class DogeShrineLazyScene extends JPanel implements Scene {
 
     private final SceneManager sceneManager;
     private final Runnable onDragonEndingComplete;
+    private final Scene dragonEpilogueScene;
 
     private int phase; // 0=fade in, 1=hold, 2=fade out, 3=handoff
     private long phaseStart;
     private float textAlpha;
     private javax.swing.Timer tickTimer;
 
-    public DogeShrineLazyScene(SceneManager sceneManager, Runnable onDragonEndingComplete) {
+    public DogeShrineLazyScene(SceneManager sceneManager, Runnable onDragonEndingComplete, Scene dragonEpilogueScene) {
         this.sceneManager = sceneManager;
         this.onDragonEndingComplete = onDragonEndingComplete;
+        this.dragonEpilogueScene = dragonEpilogueScene;
         setBackground(Color.BLACK);
         setFocusable(true);
         tickTimer = new javax.swing.Timer(32, e -> tick());
@@ -58,7 +60,11 @@ public class DogeShrineLazyScene extends JPanel implements Scene {
     private void handoff() {
         if (sceneManager == null) return;
         sceneManager.popScene();
-        sceneManager.pushScene(new DragonReunionEndingScene(onDragonEndingComplete));
+        if (dragonEpilogueScene != null) {
+            sceneManager.pushScene(dragonEpilogueScene);
+        } else {
+            sceneManager.pushScene(new DragonReunionEndingScene(onDragonEndingComplete, null));
+        }
     }
 
     @Override
