@@ -35,7 +35,7 @@ public final class SaveLoad {
         }
     }
 
-    /** 仅读取存档的章节（1/2/3），空档或异常返回 0） */
+    /** Reads only the chapter field (1/2/3) from a save; empty or error returns 0. */
     public static int getSavedChapter(String path) {
         try {
             StoryState s = load(path);

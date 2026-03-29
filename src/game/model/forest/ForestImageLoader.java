@@ -6,8 +6,8 @@ import java.io.File;
 import java.net.URL;
 
 /**
- * 森林章节图片加载。优先 classpath（/image/Chapter one/、/image/forest/），再文件路径。
- * 支持 .png、.jpg。角色立绘在 characters/ 下：prince_*.png, darabongba_*.png。
+ * Loads forest chapter images: classpath first (/image/Chapter one/, /image/forest/), then disk paths.
+ * Supports .png and .jpg. Legacy flat names: prince_*.png, darabongba_*.png.
  */
 public final class ForestImageLoader {
 
@@ -33,14 +33,14 @@ public final class ForestImageLoader {
         return null;
     }
 
-    /** 王子立绘子目录与表情→文件名映射（Stickers/people/prince/ 下） */
+    /** Prince folder under Stickers/people/ and expression-to-filename map. */
     private static final String[][] PRINCE_EXPR_FILES = {
         { "default", "The Peaceful Prince.png" },
         { "surprise", "The Happy Prince.png" },
         { "annoyed", "The Angry Prince.png" },
         { "thoughtful", "Disdainful Prince.png" }
     };
-    /** 达拉崩吧立绘子目录与表情→文件名映射（Stickers/people/Dala Bengba/ 下） */
+    /** Darabongba folder under Stickers/people/ and expression-to-filename map. */
     private static final String[][] DARABONGBA_EXPR_FILES = {
         { "default", "happy.png" },
         { "surprise", "surprise.png" },
@@ -49,7 +49,7 @@ public final class ForestImageLoader {
         { "proud", "happy.png" }
     };
 
-    /** 加载角色立绘：优先 Stickers/people/ 子目录（prince/、Dala Bengba/）的真实文件名，再扁平名 prince_default 等 */
+    /** Load a portrait: try Stickers/people/prince|Dala Bengba/ real filenames, then flat names like prince_default. */
     public static Image loadCharacter(String character, String expression) {
         String expr = expression == null ? "default" : expression.toLowerCase();
         if ("prince".equalsIgnoreCase(character)) {

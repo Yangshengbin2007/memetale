@@ -48,8 +48,8 @@ Optional: On macOS, if you have Oracle JDK 18 at the path used in the scripts (`
 
 ### Quick reference
 
-| Platform | 中文启动 | English launcher |
-|----------|-----------|------------------|
+| Platform | Chinese UI launcher | English UI launcher |
+|----------|---------------------|---------------------|
 | **macOS (double-click)** | `run.command` | `run-en.command` |
 | **macOS / Linux (terminal)** | `./run.sh` | `./run-en.sh` |
 | **Windows** | `run.bat` | `run-en.bat` |
@@ -130,7 +130,7 @@ If **Gatekeeper** still complains, use **System Settings → Privacy & Security*
 
 - Main menu: start, continue, settings (volume / mute), mini-game hub, quit.  
 - **Chapter One** intro flow, quotes, and transition into the world.  
-- **Forest / map**: exploration landmarks, dialogue, BGM, Esc menu + history.  
+- **Forest / map**: exploration landmarks, dialogue, BGM, Esc menu + history; **Doge Shrine** opens the chapter-3-style epilogue (then title).  
 - **Troll cave** (dialogue) → **boss battle** (normal + optional difficulty relief on story loss) → **post-battle** story → return to map.  
 - Save / load / delete saves; dialogue history lists for menus.  
 - Mini-game collection entry (including hell / normal troll battle variants where wired in `Main`).
@@ -152,11 +152,21 @@ run*.sh / run*.command / run*.bat — Launchers (CN + EN pairs)
 
 ---
 
-## 中文简要说明
+## macOS / Linux quick tips
 
-- **运行**：macOS 双击 `run.command`（英文界面用 `run-en.command`）；终端可用 `./run.sh` / `./run-en.sh`；Windows 用 `run.bat` / `run-en.bat`。  
-- **权限**：若提示无法验证开发者，请 **右键 → 打开**；仍不行则在项目根目录执行 `xattr -cr .`，并 `chmod +x run.command run.sh` 等。  
-- **环境**：需要 **Java 18**，脚本会自动编译并启动游戏。
+- **Run:** On macOS double-click `run.command` (English UI: `run-en.command`); in a shell use `./run.sh` or `./run-en.sh`; on Windows use `run.bat` / `run-en.bat`.
+- **Gatekeeper:** If macOS blocks the app, use **Right-click → Open** once; if needed run `xattr -cr .` from the repo root and `chmod +x run.command run.sh` (and the `run-en` variants).
+- **JDK:** **Java 18** recommended; the launch scripts compile then start `game.launcher.Main`.
+
+---
+
+## MEMETALE — Chapter 1 (short)
+
+**MEMETALE** is a meme-heavy comedy adventure by **Shengbin Yang**. It mixes exploration, dialogue, several mini-games (Undertale-style bullet box, memory match, Rickroll “stop-and-go”, etc.), and light story beats. There is an easier story route and harder mini-game / hell modes; optional hidden “banana” collectibles.
+
+**Inspiration (parody / transformative):** Undertale, Chrome Dino, classic memory games, playground red-light–green-light, and meme culture (Doge, Cheems, troll face, Rickroll). **Assets:** AI-assisted or edited art; no direct redistribution of copyrighted tracks—references are satire / original implementation. **Tools:** Java, editors, debuggers.
+
+**Doge Shrine → epilogue:** Entering **Doge Shrine** on the forest map shows a short placeholder line, then an English epilogue (“After the dragon · reunion”). Background: add `goodending.cg` or `goodending.jpg` / `goodending.png` under `image/Chapter one/`. BGM: `cg2.wav` for the scene; credits use `rickroll.wav`; the last gag lines play **without** music, then you return to the title.
 
 ---
 

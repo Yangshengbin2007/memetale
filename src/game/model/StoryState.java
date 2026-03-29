@@ -13,14 +13,14 @@ public class StoryState implements Serializable {
     private final Map<String, Boolean> flags = new HashMap<>();
     private String currentScene;
 
-    /** 存档所属章节（1=第一章 2=第二章 3=第三章），用于读档时判断与显示 */
+    /** Save slot chapter id (1 / 2 / 3) for load UI and routing. */
     private int savedChapter = 1;
 
-    /** 第一章当前对话下标（0-based），存/读档用，读档从此位置继续 */
+    /** Chapter-one dialogue index (0-based); saved and restored on load. */
     private int chapterOneDialogueIndex = 0;
-    /** 第一章已出现过的对话（History 用），随进度追加 */
+    /** Chapter-one dialogue history for the History menu; grows as the player progresses. */
     private final List<DialogueRecord> chapterOneHistory = new ArrayList<>();
-    /** 当前使用的存档槽位（与游戏内 Save/Load 一致，读档时用同一槽） */
+    /** Last save slot used in-game (load uses the same slot). */
     private int lastUsedSaveSlot = 1;
 
     /** Troll Cave dialogue index (0-based). Save/Load. */

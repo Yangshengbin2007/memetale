@@ -8,8 +8,8 @@ import java.io.File;
 import java.net.URL;
 
 /**
- * 单个地标子场景占位。显示地标名称、占位背景与「返回地图」按钮。
- * 后续可替换为对话/小游戏/Boss 等。图片、音乐可留空。
+ * Single landmark view: name, optional background art, and a Return to Map button.
+ * Can later be replaced with dialogue, mini-games, or bosses. Images and music are optional.
  */
 public class ForestLandmarkScene extends JPanel implements Scene {
     private final Landmark landmark;
@@ -18,7 +18,7 @@ public class ForestLandmarkScene extends JPanel implements Scene {
     private boolean hoverReturn = false;
     private final Rectangle returnBounds = new Rectangle();
 
-    /** 各地标对应的背景图文件名（无则留 null，画占位） */
+    /** Background filename per landmark id; null draws a placeholder panel. */
     private static String bgFileForLandmark(String id) {
         switch (id) {
             case "doge_shrine":      return "doge_shrine.png";

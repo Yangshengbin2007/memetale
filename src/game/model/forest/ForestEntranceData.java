@@ -1,14 +1,14 @@
 package game.model.forest;
 
 /**
- * 森林入口对话：Prince meets Darabongba。
- * 每行 [speaker, text, princeExpression, darabongbaExpression]。
- * speaker = "Prince" | "Darabongba"。达拉崩吧的 surprise/resentment 在绘制时水平镜像以贴右。
+ * Forest entrance dialogue: Prince meets Darabongba.
+ * Each row: [speaker, text, princeExpression, darabongbaExpression].
+ * speaker is "Prince" or "Darabongba". Mirror Darabongba for surprise/resentment so he hugs the right edge.
  */
 public final class ForestEntranceData {
     private ForestEntranceData() {}
 
-    /** 表情键：default, surprise, resentment, proud, nervous, annoyed, thoughtful */
+    /** Expression keys: default, surprise, resentment, proud, nervous, annoyed, thoughtful */
     public static final String EXPR_DEFAULT = "default";
     public static final String EXPR_SURPRISE = "surprise";
     public final static String EXPR_RESENTMENT = "resentment";
@@ -17,12 +17,12 @@ public final class ForestEntranceData {
     public static final String EXPR_ANNOYED = "annoyed";
     public static final String EXPR_THOUGHTFUL = "thoughtful";
 
-    /** 达拉崩吧在以下表情时需水平镜像，保证人物贴右侧 */
+    /** Horizontally mirror Darabongba for these expressions so the sprite sits on the right. */
     public static boolean mirrorDarabongba(String expr) {
         return EXPR_SURPRISE.equals(expr) || EXPR_RESENTMENT.equals(expr);
     }
 
-    /** 每行: speaker, text, princeExpr, darabongbaExpr */
+    /** Each row: speaker, text, princeExpr, darabongbaExpr */
     public static final String[][] LINES = {
         {"Prince", "Whoa! Are you okay?", EXPR_SURPRISE, EXPR_DEFAULT},
         {"Darabongba", "Define \"okay\".", EXPR_DEFAULT, EXPR_SURPRISE},

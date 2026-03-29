@@ -2,7 +2,7 @@ package game.model;
 
 import java.io.Serializable;
 
-/** 一条对话记录，用于 History 显示与存档。 */
+/** One dialogue line for History display and save data. */
 public final class DialogueRecord implements Serializable {
     private static final long serialVersionUID = 1L;
     private final String speaker;

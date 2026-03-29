@@ -1,13 +1,13 @@
 package game.model;
 
 /**
- * 第一章对话与 CG 分段数据。CG1=阳台，CG2=龙出现，CG3=国王给任务。
- * 点击推进对话，按索引切换 cg1/cg2/cg3，最后淡入淡出 "Chapter 1 Meme Forest"。
+ * Chapter one dialogue and CG segments. CG1 = balcony, CG2 = dragon, CG3 = king's quest.
+ * Advance on click; CG switches by line index, then the title card "Chapter 1 Meme Forest" fades in/out.
  */
 public final class ChapterOneData {
     private ChapterOneData() {}
 
-    /** 每条对话 [0]=speaker, [1]=text。舞台说明用 speaker "" */
+    /** Each line: [0]=speaker, [1]=text. Stage directions use speaker "". */
     public static final String[][] LINES = {
         // CG1 Balcony Scene
         {"Princess", "What a beautiful day."},
@@ -133,11 +133,11 @@ public final class ChapterOneData {
         {"King", "That is a risk we are willing to take."},
     };
 
-    /** CG1 结束位置（不含），即 lineIndex < CG1_END 为 cg1 */
+    /** Exclusive end index for CG1 (lineIndex < CG1_END uses cg1). */
     public static final int CG1_END = 37;
-    /** CG2 结束位置（不含） */
+    /** Exclusive end index for CG2. */
     public static final int CG2_END = 88;
-    /** 对话结束后显示的章节标题 */
+    /** Chapter title shown after the last dialogue line. */
     public static final String CHAPTER_TITLE = "Chapter 1 Meme Forest";
 
     public static int cgIndexForLine(int lineIndex) {

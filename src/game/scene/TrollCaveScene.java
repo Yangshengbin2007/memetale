@@ -27,8 +27,8 @@ import java.util.Map;
  */
 public class TrollCaveScene extends JPanel implements Scene {
     /**
-     * 代理数据源：用反射读取真实的 game.model.forest.TrollCaveData。
-     * 规避 IDE/linter 在当前项目里的“跨包常量无法解析”误报。
+     * Indirection: reflectively reads the real {@code game.model.forest.TrollCaveData} class.
+     * Avoids IDE/linter false positives about cross-package constants in this project layout.
      */
     private static final class TrollCaveData {
         private static final String DATA_CLASS_NAME = "game.model.forest.TrollCaveData";

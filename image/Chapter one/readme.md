@@ -1,26 +1,26 @@
-# Chapter one — 森林章节资源
+# Chapter one — forest art
 
-本目录存放**第一章森林**所用图片，与 `ForestResources` / `ForestImageLoader` 对应。
+Images for the first forest arc. Paths line up with `ForestResources` / `ForestImageLoader`.
 
-## 背景（放在本目录根下）
+## Backgrounds (this folder root)
 
-- **forest1.jpg** — 森林入口背景
-- **map1forest.jpg** — 森林大地图（入口地图对话 + 大地图场景共用）
+- **forest1.jpg** — forest entrance background
+- **map1forest.jpg** — overworld map (entrance map dialogue + overworld scene)
 
-## 角色立绘
+## Character portraits
 
-优先放在项目根目录 **`Stickers/people/`** 下（与 Stickers/icon.png 同级）。也可放在本目录的 **`characters/`** 子目录。文件名如下（支持 .png / .jpg）：
+Prefer **`Stickers/people/`** at the repo root (next to `Stickers/icon.png`). You may also use the **`characters/`** subfolder here. Filenames below (`.png` or `.jpg`):
 
-**王子 Prince（左侧）：**
+**Prince (left):**
 - prince_default
 - prince_surprise
 - prince_annoyed
 - prince_thoughtful
 
-**骑士达拉崩吧 Darabongba（右侧，surprise/resentment 会镜像）：**
+**Darabongba (right; surprise/resentment are mirrored):**
 - darabongba_default
 - darabongba_surprise
 - darabongba_resentment
 - darabongba_nervous
 
-详细说明见项目根目录 **docs/forest-assets-organization.md**。
+More detail: **docs/forest-assets-organization.md** at the repo root.

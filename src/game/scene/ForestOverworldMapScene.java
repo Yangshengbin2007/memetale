@@ -11,14 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 森林大地图场景。显示一张大地图（与森林入口地图同源 map1forest.jpg），上有多个可点击地标。
- * 资源路径统一见 ForestResources / ForestImageLoader。
+ * Forest overworld map: same art as the forest entrance map (map1forest.jpg) with clickable landmarks.
+ * Asset paths: {@link game.model.forest.ForestResources} / {@link game.model.forest.ForestImageLoader}.
  */
 public class ForestOverworldMapScene extends JPanel implements Scene {
     private Image mapImage;
     private final List<Landmark> landmarks = new ArrayList<>();
     private Landmark hoverLandmark = null;
     private final SceneManager sceneManager;
+    /** After Doge ending sequence: clear stack and return to title (wired from Main). */
+    private final Runnable onDogeArcCompleteToTitle;
     private Clip mapMusicClip;
     /** After Troll Cave + Doge done: click Troll = "We've been there"; click other = "We're going..." then black then go. */
     private static final int PHASE_NORMAL = 0;
@@ -36,7 +38,7 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
     public static final class Landmark {
         public final String id;
         public final String displayName;
-        /** 在 800x600 下的参考区域，实际绘制时按当前宽高缩放 */
+        /** Reference hit box in 800x600 space; scaled to the current panel size when hit-testing and drawing. */
         public final int refX, refY, refW, refH;
 
         public Landmark(String id, String displayName, int refX, int refY, int refW, int refH) {
@@ -60,12 +62,22 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
         }
     }
 
-    public ForestOverworldMapScene(SceneManager sceneManager) {
+    public ForestOverworldMapScene(SceneManager sceneManager, Runnable onDogeArcCompleteToTitle) {
         this.sceneManager = sceneManager;
+        this.onDogeArcCompleteToTitle = onDogeArcCompleteToTitle != null ? onDogeArcCompleteToTitle : () -> {};
         setBackground(new Color(25, 50, 25));
         initLandmarks();
         loadImage();
         initMouse();
+    }
+
+    private void openLandmark(Landmark lm) {
+        if (lm == null || sceneManager == null) return;
+        if ("doge_shrine".equals(lm.id)) {
+            sceneManager.pushScene(new DogeShrineLazyScene(sceneManager, onDogeArcCompleteToTitle));
+        } else {
+            sceneManager.pushScene(new ForestLandmarkScene(lm, () -> sceneManager.popScene()));
+        }
     }
 
     private void initLandmarks() {
@@ -93,8 +105,7 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
                 if (sceneManager == null) return;
                 if (mapPhase == PHASE_BLACK) {
                     if (pendingDestination != null) {
-                        Scene landmarkScene = new ForestLandmarkScene(pendingDestination, () -> sceneManager.popScene());
-                        sceneManager.pushScene(landmarkScene);
+                        openLandmark(pendingDestination);
                         pendingDestination = null;
                     }
                     mapPhase = PHASE_NORMAL;
@@ -148,8 +159,7 @@ public class ForestOverworldMapScene extends JPanel implements Scene {
                     repaint();
                     return;
                 }
-                Scene landmarkScene = new ForestLandmarkScene(hoverLandmark, () -> sceneManager.popScene());
-                sceneManager.pushScene(landmarkScene);
+                openLandmark(hoverLandmark);
             }
 
             @Override

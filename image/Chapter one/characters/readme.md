@@ -1,19 +1,19 @@
-# 森林章节 — 角色立绘
+# Forest chapter — character portraits
 
-本目录放王子和达拉崩吧的立绘，**文件名**（扩展名用 .png 或 .jpg 均可）：
+Place Prince and Darabongba art here. **Filenames** (use `.png` or `.jpg`):
 
-## 王子 Prince（4 张，画面左侧）
+## Prince (four files, left side)
 
 - prince_default
 - prince_surprise
 - prince_annoyed
 - prince_thoughtful
 
-## 达拉崩吧 Darabongba（4 张，画面右侧）
+## Darabongba (four files, right side)
 
 - darabongba_default
-- darabongba_surprise  （显示时会水平镜像）
-- darabongba_resentment（显示时会水平镜像）
+- darabongba_surprise (drawn mirrored)
+- darabongba_resentment (drawn mirrored)
 - darabongba_nervous
 
-说话的人正常亮度，未说话的人会变暗。
+The active speaker stays bright; the idle portrait is dimmed.

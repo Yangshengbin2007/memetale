@@ -37,4 +37,10 @@ public class SceneManager {
         Scene s = sceneStack.isEmpty() ? null : sceneStack.pop();
         setScene(s);
     }
+
+    /** Clears the push stack, then switches to {@code scene} (e.g. return to title after a nested flow). */
+    public void clearStackAndSetScene(Scene scene) {
+        sceneStack.clear();
+        setScene(scene);
+    }
 }

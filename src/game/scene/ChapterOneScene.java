@@ -14,16 +14,16 @@ import java.net.URL;
 import javax.sound.sampled.*;
 
 /**
- * 游戏第一章场景。底部对话点击推进，CG 随剧情切换，结尾淡入淡出 "Chapter 1 Meme Forest"。
- * 存档含位置与 History，读档从同一位置继续。ESC 暂停：存档/读档/设置/历史/返回主菜单。
+ * Chapter one: click to advance dialogue, CG swaps with the script, ends with a "Chapter 1 Meme Forest" title card.
+ * Saves store position and History; loads resume in place. ESC: save/load/settings/history/quit to title.
  */
 @SuppressWarnings("fallthrough")
 public class ChapterOneScene extends JPanel implements Scene {
     private final Runnable onQuitToTitle;
-    /** 第一章结尾黑屏 phase 7 点击 Continue 后进入森林入口，可为 null */
+    /** After post-chapter phase 7 (Continue), go to the forest entrance; null disables. */
     private final Runnable onChapterOneComplete;
     private Image chapterBg;
-    /** 当前显示的 CG 编号 1/2/3，用于避免重复 load */
+    /** Active CG index 1/2/3 to avoid reloading the same image. */
     private int currentCgIndex = 0;
 
     private boolean pauseMenuVisible = false;
@@ -35,10 +35,10 @@ public class ChapterOneScene extends JPanel implements Scene {
     private final Rectangle pauseHistoryBounds = new Rectangle();
     private final Rectangle pauseQuitBounds = new Rectangle();
 
-    /** 当前使用的存档槽位（与 StoryState 同步，存/读同一槽）；存档对话框标题显示。 */
+    /** Save slot mirrored in StoryState; dialog titles use this slot. */
     private int lastUsedSaveSlot = 1;
 
-    /** 章节标题 "Chapter 1 Meme Forest" 淡入淡出：0=未开始 1=淡入 2=停留 3=淡出 4=结束 */
+    /** Title card "Chapter 1 Meme Forest" phases: 0 idle, 1 fade in, 2 hold, 3 fade out, 4 done. */
     private int chapterTitlePhase = 0;
     private long chapterTitleStartTime;
     private static final int TITLE_FADE_MS = 1000;
@@ -46,32 +46,32 @@ public class ChapterOneScene extends JPanel implements Scene {
     private float chapterTitleAlpha = 0f;
     private javax.swing.Timer titleTimer;
 
-    /** 进入场景：先黑屏+引言，再淡入显示背景。*/
+    /** On enter: black + quote, then fade in the CG background. */
     private float enterFadeAlpha = 1f;
     private float quoteTextAlpha = 0f;
     private long enterFadeStartTime;
     private static final int QUOTE_FADE_IN_MS = 500;
     private static final int QUOTE_HOLD_MS = 3000;
     private static final int QUOTE_FADEOUT_MS = 500;
-    /** 引言结束后黑屏淡出显示背景的时长（调大=更慢） */
+    /** Fade length from black to gameplay after the quote (larger = slower). */
     private static final int ENTER_FADE_MS = 950;
     private static final int ENTER_FADE_TIMER_DELAY = 40;
     private static final String QUOTE_TEXT = "When you can make a choice, don't let yourself regret it.";
     private javax.swing.Timer enterFadeTimer;
 
-    /** 当前行开始显示的时间（用于 5 秒打字机动画）；点击未完成时立刻显现 */
+    /** Line start time for the typewriter; click reveals the full line early. */
     private long lineStartTime = 0L;
     private static final int TEXT_DURATION_MS = 1000;
-    /** 打字机动画 repaint 驱动 */
+    /** Timer tick for typewriter repaints. */
     private static final int TEXT_ANIM_DELAY_MS = 40;
 
-    /** CG+文本框 淡入：0→1，进入或切换 CG 时用 */
+    /** Fade CG + text box from 0 to 1 when entering or swapping CG. */
     private float sceneFadeAlpha = 0f;
     private long sceneFadeStartTime = 0L;
     private static final int SCENE_FADE_MS = 400;
     private javax.swing.Timer sceneFadeTimer;
 
-    /** 空格：按下=点击推进；长按 3 秒=快速过对话，松开取消 */
+    /** Space down acts like click; hold ~3s for fast-forward until release. */
     private boolean spaceKeyHeld = false;
     private boolean fastForwardActive = false;
     private static final int SPACE_HOLD_MS = 3000;
@@ -79,20 +79,20 @@ public class ChapterOneScene extends JPanel implements Scene {
     private javax.swing.Timer holdSpaceTimer;
     private javax.swing.Timer fastForwardTimer;
 
-    /** 下次 onEnter 时跳过开场白（主菜单 Continue 读档后设为 true） */
+    /** Skip the opening quote on next enter (set after Continue from the title menu). */
     private static boolean skipQuoteNextEnter = false;
     public static void setSkipQuoteNextEnter(boolean skip) { skipQuoteNextEnter = skip; }
 
     /** Last line index that was added to history (so we record once when typewriter finishes that line). */
     private int lastLineRecordedToHistory = -1;
 
-    /** 第一章字幕播完后黑屏，预留点击交互地图（之后实现） */
+    /** Black screen after chapter text; reserved for a future clickable map transition. */
     private boolean chapterEndBlackScreen = false;
 
     /** CG BGM: 1=cg1, 2=cg2, 3=cg3. Only used when actually playing (not during enter/quote). */
     private Clip cgBgmClip;
 
-    /** Post-chapter sequence: 黑屏 2s -> title.png + begin.wav -> title 淡出 -> "Chapter One Meme Forest" 文字 + chapteronesound.wav -> 文字淡出音效停 -> 黑屏 */
+    /** Post-chapter: black 2s -> title.png + begin.wav -> title fade -> chapter text + chapteronesound.wav -> fade out (stop sfx) -> black. */
     private int postChapterPhase = 0;  // 0=inactive, 1=black wait 1s, 2=show title+begin.wav, 3=title fade out, 4=chapter text+chapteronesound.wav fade in, 5=hold, 6=fade out, 7=black map
     private long postChapterStartTime;
     private Image titleStickerImage;
@@ -101,7 +101,7 @@ public class ChapterOneScene extends JPanel implements Scene {
     private float postChapterAlpha = 0f;
     private static final int POST_BLACK_WAIT_MS = 2000;
     private static final int POST_TITLE_FADE_MS = 600;
-    /** CG3+文字框一起淡出：淡出期间 active=true，淡完黑屏2秒再显示 title */
+    /** CG3 + dialogue fade out: active while fading, then black 2s before the title sticker. */
     private boolean chapterEndFadeOutActive = false;
     private float chapterEndFadeOutAlpha = 1f;
     private long chapterEndFadeOutStartTime;
@@ -284,7 +284,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         });
     }
 
-    /** CG3 与文字框一起淡出，淡完后黑屏 2 秒再显示 title；同时停止 CG3 音乐 */
+    /** Fade CG3 and the text box, black for 2s, then the title card; stops CG3 music. */
     private void startEndFadeOut() {
         stopCgBgm();
         chapterEndFadeOutActive = true;
@@ -452,7 +452,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         applyChapterVolumeToClip(chapterOneSoundClip, false);
     }
 
-    /** 从文件名加载并设为当前章节背景（图片1等，之后可换成别的图） */
+    /** Load chapter background from a filename (cg1/cg2/cg3, etc.). */
     public void setChapterBackgroundFromFile(String filename) {
         Image img = loadImageCandidatesRaw(filename);
         if (img != null)
@@ -461,7 +461,7 @@ public class ChapterOneScene extends JPanel implements Scene {
             System.err.println("Chapter background " + filename + " not found.");
     }
 
-    /** 直接设置章节背景图（便于后续换成别的图片） */
+    /** Replace the chapter background image directly. */
     public void setChapterBackground(Image image) {
         if (image != null)
             chapterBg = image;
@@ -532,7 +532,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         if (sceneFadeAlpha < 1f)
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
 
-        // CG3+文字框淡出：黑 overlay 随 chapterEndFadeOutAlpha 从 0 到 1
+        // CG3 + box fade: black overlay follows chapterEndFadeOutAlpha 0 -> 1
         if (chapterEndFadeOutActive && chapterEndFadeOutAlpha < 1f) {
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f - chapterEndFadeOutAlpha));
             g2.setColor(Color.BLACK);
@@ -540,7 +540,7 @@ public class ChapterOneScene extends JPanel implements Scene {
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
         }
 
-        // 章节标题淡入淡出（已废弃：结尾改为先 title 再 chapter 文字，此处保留兼容）
+        // Legacy chapter title fade (kept for compatibility; ending now uses title sticker first)
         if (chapterTitlePhase > 0 && chapterTitlePhase < 4 && chapterTitleAlpha > 0f) {
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, chapterTitleAlpha));
             g2.setColor(Color.BLACK);
@@ -595,7 +595,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                 g2.drawString(txt, (w - fm.stringWidth(txt)) / 2, h / 2 + 20);
             }
         }
-        // 进入游戏：黑屏遮罩 + 中央引言（读档时跳过）
+        // Enter: black veil + centered quote (skipped when continuing a save)
         if (enterFadeAlpha > 0f) {
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, enterFadeAlpha));
             g2.setColor(Color.BLACK);
@@ -654,7 +654,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         paintBtn(g2, pauseQuitBounds, "Quit to Title", hoverPauseQuit, pressedPauseQuit);
     }
 
-    /** 底部对话栏：说话人 + 正文（visibleChars 为打字机可见字数，-1 或 ≥length 表示全部） */
+    /** Bottom dialogue bar: speaker + body (visibleChars for typewriter; -1 or >= length shows all). */
     private void paintDialogueBox(Graphics2D g2, int w, int h, int lineIndex, int visibleChars) {
         if (lineIndex < 0 || lineIndex >= ChapterOneData.LINES.length) return;
         String[] line = ChapterOneData.LINES[lineIndex];
@@ -836,7 +836,7 @@ public class ChapterOneScene extends JPanel implements Scene {
                     repaint();
                     return;
                 }
-                // 点击推进对话（无暂停、无进入黑屏/引言时）
+                // Click advances when not paused and not in the opening black/quote
                 if (enterFadeAlpha <= 0f && quoteTextAlpha <= 0f && !chapterEndFadeOutActive) {
                     int idx = GameState.getState().getChapterOneDialogueIndex();
                     if (chapterTitlePhase == 1 || chapterTitlePhase == 2 || chapterTitlePhase == 3) {
@@ -998,7 +998,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         dialog.setVisible(true);
     }
 
-    /** 点击/空格：若当前行未播完则立刻显现，否则推进下一条 */
+    /** Click/space: finish the current line if typing, else advance. */
     private void performAdvanceOrReveal() {
         int idx = GameState.getState().getChapterOneDialogueIndex();
         if (idx >= ChapterOneData.LINES.length || chapterTitlePhase != 0 || chapterEndFadeOutActive) return;
@@ -1025,7 +1025,7 @@ public class ChapterOneScene extends JPanel implements Scene {
         }
     }
 
-    /** 推进一条对话；若到达最后一句则启动 CG3+文字框淡出（不播第一次章节标题文字），淡完黑屏 2 秒再 title -> chapter 文字+音效 -> 黑屏。 */
+    /** Advance one line; on the last line start CG3+box fade (skip legacy title pass), then black, title sticker, chapter text+sfx, black. */
     private void advanceDialogue() {
         StoryState state = GameState.getState();
         int idx = state.getChapterOneDialogueIndex();

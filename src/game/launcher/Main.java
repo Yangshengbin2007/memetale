@@ -49,7 +49,10 @@ public class Main {
 				() -> sceneManager.setScene(miniGameCollectionScene));
 			miniGameCollectionScene.setLaunchTrollBattle(() -> sceneManager.setScene(trollBattleMinigameNormal),
 				() -> sceneManager.setScene(trollBattleMinigameHell));
-			ForestOverworldMapScene forestOverworldMapScene = new ForestOverworldMapScene(sceneManager);
+			ForestOverworldMapScene forestOverworldMapScene = new ForestOverworldMapScene(sceneManager, () -> {
+				startScene.setSkipJerryNextEnter(true);
+				sceneManager.clearStackAndSetScene(startScene);
+			});
 			ForestEntranceScene forestEntranceScene = new ForestEntranceScene(
 				() -> sceneManager.setScene(forestOverworldMapScene),
 				() -> {

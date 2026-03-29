@@ -60,20 +60,20 @@ public class StartScene extends JPanel implements Scene {
 
     // sound for jerry logo
     private Clip jerryClip;
-    // 建议使用 WAV 而不是 MP3（Java 标准库对 MP3 不支持）
-    private final String JERRY_SOUND_NAME = "beginsound.wav"; // 放在 sound/ 目录下
+    // Prefer WAV; stock Java does not decode MP3 without extra SPIs.
+    private final String JERRY_SOUND_NAME = "beginsound.wav"; // under sound/
     // volume test ding sound
-    private final String DING_SOUND_NAME = "ding.wav"; // 放在 sound/ 目录下
-    private final String CLICK_SOUND_NAME = "click.wav"; // 开始游戏等按钮点击音效，无则用 ding.wav
+    private final String DING_SOUND_NAME = "ding.wav"; // under sound/
+    private final String CLICK_SOUND_NAME = "click.wav"; // UI click; falls back to ding.wav
 
-    // 背景 BGM（开始页面的循环音乐）
+    // Title screen looping BGM
     private Clip bgmClip;
-    private final String BGM_SOUND_NAME = "beginmusic.wav"; // 放在 music/ 目录下
-    // BGM 最长播放时长（毫秒），例如只播放前 8 秒
+    private final String BGM_SOUND_NAME = "beginmusic.wav"; // under music/
+    // Cap BGM length in ms (e.g. only the first eight seconds)
     private final int BGM_MAX_PLAY_MS = 8000;
     private long bgmStartTime = -1L;
 
-    // 全局音量（0.0f ~ 1.0f），主菜单与游戏内设置共用
+    // Master volume 0..1 shared by the title menu and in-game settings
     private static float masterVolumeStatic = 1.0f;
     /** Mute all music (BGM). Applied on Apply click. */
     private static boolean muteAllMusicStatic = false;
@@ -93,7 +93,7 @@ public class StartScene extends JPanel implements Scene {
     public static boolean getMuteAllSoundEffects() { return muteAllSoundEffectsStatic; }
     public static void setMuteAllSoundEffects(boolean v) { muteAllSoundEffectsStatic = v; }
 
-    // 主界面按钮交互状态
+    // Title button hover/press state
     private boolean hoverContinue = false;
     private boolean hoverSetting = false;
     private boolean hoverStartGames = false;
@@ -110,19 +110,19 @@ public class StartScene extends JPanel implements Scene {
     private final Rectangle miniGamesBounds = new Rectangle();
     private final Rectangle quitBounds = new Rectangle();
 
-    /** 点击「开始游戏」时调用，切换到第一章等游戏场景；由 Main 注入 */
+    /** Fired when Start Game is pressed; Main wires this to chapter one (or resume). */
     private Runnable onStartGame;
-    /** 点击「Mini Games」时调用，切换到小游戏合集场景；由 Main 注入 */
+    /** Fired when Mini Games is pressed; Main wires the hub scene. */
     private Runnable onMiniGames;
 
-    /** 下次 onEnter 时直接显示主菜单（不播 Jerry 动画），用于从游戏内 Quit 回主页面 */
+    /** Next onEnter skips the Jerry intro (set when quitting to title from gameplay). */
     private boolean skipJerryNextEnter = false;
 
-    // 读档淡入淡出效果
+    // Load-game fade overlay
     private boolean loadFadeActive = false;
     private long loadFadeStartTime = 0L;
     private final int LOAD_FADE_TOTAL_MS = 800;
-    private static final int START_GAME_FADEOUT_MS = 450; // 开始游戏淡出时长
+    private static final int START_GAME_FADEOUT_MS = 450; // fade before leaving title
     private float loadFadeAlpha = 0f;
 
     // settings slider
@@ -134,7 +134,7 @@ public class StartScene extends JPanel implements Scene {
         JERRY_FADE_OUT,
         START_FADE_IN,
         DONE,
-        START_GAME_FADEOUT  // 点击开始游戏后淡出主界面，再切场景
+        START_GAME_FADEOUT  // fade title out, then switch scene
     }
 
     private State state = State.JERRY_FADE_IN;
@@ -150,19 +150,19 @@ public class StartScene extends JPanel implements Scene {
 
     private void loadImages() {
         // keep jerry scaled to a reasonable size (use ImageIcon to get real dimensions)
-        // 优化一下 Jerry 图标大小，让整体更协调
+        // Scale the Jerry sticker for layout balance
         jerryImg = loadAndScaleCandidates("jerry.png", 220, 220);
         // load start background raw; we'll scale-to-cover in paintComponent
         startImg = loadImageCandidatesRaw("start.jpg");
         // we no longer use separate images for the buttons; they are drawn procedurally
     }
 
-    /** 设置点击「开始游戏」后的回调（由 Main 调用） */
+    /** Main injects the Start Game handler. */
     public void setOnStartGame(Runnable r) {
         onStartGame = r;
     }
 
-    /** 设置点击「Mini Games」后的回调（由 Main 调用） */
+    /** Main injects the Mini Games handler. */
     public void setOnMiniGames(Runnable r) {
         onMiniGames = r;
     }
@@ -171,7 +171,7 @@ public class StartScene extends JPanel implements Scene {
         skipJerryNextEnter = skip;
     }
 
-    // 使用 ImageIcon 来获取图片尺寸并做缩放，避免 Image.getWidth(this) 在未显示时返回 -1
+        // ImageIcon gives reliable dimensions before the component is shown
     private Image loadAndScaleCandidates(String filename, int maxW, int maxH) {
         String[] classpathCandidates = new String[] {
                 "/image/" + filename,
@@ -376,7 +376,7 @@ public class StartScene extends JPanel implements Scene {
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
                     Graphics2D g2 = (Graphics2D) g.create();
-                    // 背景稍微提亮一点，避免整体太暗
+                    // Slightly lift background brightness
                     g2.setColor(new Color(30, 30, 30, 220));
                     g2.fillRect(0, 0, getWidth(), getHeight());
                     g2.dispose();
@@ -390,7 +390,7 @@ public class StartScene extends JPanel implements Scene {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     // subtle gold border + dark center to match theme
-                    // 再提升亮度，让设置内容更加清晰
+                    // Brighter still so settings text reads clearly
                     g2.setColor(new Color(110, 110, 110, 240));
                     g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
                     g2.setStroke(new BasicStroke(3f));
@@ -579,14 +579,14 @@ public class StartScene extends JPanel implements Scene {
                 }
                 default -> { }
             }
-            // 控制 BGM 的最大播放时长（例如只播放前 BGM_MAX_PLAY_MS 毫秒）
+            // Enforce BGM_MAX_PLAY_MS cap on the title BGM
             if (bgmClip != null && bgmStartTime > 0) {
                 long bgmElapsed = System.currentTimeMillis() - bgmStartTime;
                 if (bgmElapsed >= BGM_MAX_PLAY_MS) {
                     stopBackgroundMusic();
                 }
             }
-            // 读档淡入淡出效果更新
+            // Update load-game fade overlay
             if (loadFadeActive) {
                 long t = System.currentTimeMillis() - loadFadeStartTime;
                 float progress = Math.min(1f, t / (float) LOAD_FADE_TOTAL_MS);
@@ -675,7 +675,7 @@ public class StartScene extends JPanel implements Scene {
             }
         }
 
-        // 读档淡入淡出整体遮罩
+        // Full-screen load fade veil
         if (loadFadeActive && loadFadeAlpha > 0f) {
             g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, loadFadeAlpha));
             g2.setColor(Color.BLACK);
@@ -761,7 +761,7 @@ public class StartScene extends JPanel implements Scene {
     public void onExit() {
         if (timer != null && timer.isRunning())
             timer.stop();
-        // 离开场景时确保音效停止并释放资源
+        // Stop and release clips when leaving the title
         stopJerrySound();
         stopBackgroundMusic();
     }
@@ -776,10 +776,10 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 播放 Jerry 出现时的音效，只播放一次。
+     * Plays the Jerry entrance sting once.
      */
     private void playJerrySoundOnce() {
-        // 如有正在播放的旧 Clip，先停掉
+        // Stop any previous Jerry clip before reopening
         stopJerrySound();
         try {
             Clip clip = loadSoundClip(JERRY_SOUND_NAME);
@@ -796,7 +796,7 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 停止当前 Jerry 音效并释放资源。
+     * Stops the Jerry sting and releases its clip.
      */
     private void stopJerrySound() {
         if (jerryClip != null) {
@@ -813,17 +813,17 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 尝试从 classpath (/sound/) 或项目目录 sound/ 中加载指定文件名的音效。
+     * Loads SFX from classpath /sound/ or the sound/ working directory.
      */
     private Clip loadSoundClip(String fileName) {
         try {
-            // 1. 先尝试从 classpath 中读取（例如打包到 JAR 的 /sound/ 目录）
+            // 1) Classpath (e.g. /sound/ inside a jar)
             URL url = getClass().getResource("/sound/" + fileName);
             AudioInputStream ais;
             if (url != null) {
                 ais = AudioSystem.getAudioInputStream(url);
             } else {
-                // 2. 回退到文件系统相对路径 sound/
+                // 2) Filesystem ./sound/
                 File f = new File("sound/" + fileName);
                 if (!f.exists()) {
                     System.err.println("Sound file not found: " + f.getAbsolutePath());
@@ -838,12 +838,12 @@ public class StartScene extends JPanel implements Scene {
             System.err.println("Failed to load sound: " + fileName + " - " + ex.getMessage());
             return null;
         } finally {
-            // 注意：Clip 打开后会持有数据，这里不能提前关闭 ais；交给 Clip 管理
+            // Do not close ais here; the clip owns the stream
         }
     }
 
     /**
-     * 开始在开始页面播放 BGM（循环播放），但总时长不超过 BGM_MAX_PLAY_MS。
+     * Starts looping title BGM, capped at BGM_MAX_PLAY_MS.
      */
     private void startBackgroundMusicLoop() {
         stopBackgroundMusic();
@@ -863,7 +863,7 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 停止开始页面 BGM 并释放资源。
+     * Stops title BGM and releases the clip.
      */
     private void stopBackgroundMusic() {
         bgmStartTime = -1L;
@@ -881,17 +881,17 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 尝试从 classpath (/music/) 或项目目录 music/ 中加载开始页面 BGM。
+     * Loads title BGM from classpath /music/ or ./music/.
      */
     private Clip loadMusicClip(String fileName) {
         try {
-            // 1. 先尝试从 classpath 中读取（例如打包到 JAR 的 /music/ 目录）
+            // 1) Classpath /music/
             URL url = getClass().getResource("/music/" + fileName);
             AudioInputStream ais;
             if (url != null) {
                 ais = AudioSystem.getAudioInputStream(url);
             } else {
-                // 2. 回退到文件系统相对路径 music/
+                // 2) Filesystem ./music/
                 File f = new File("music/" + fileName);
                 if (!f.exists()) {
                     System.err.println("Music file not found: " + f.getAbsolutePath());
@@ -906,7 +906,7 @@ public class StartScene extends JPanel implements Scene {
             System.err.println("Failed to load music: " + fileName + " - " + ex.getMessage());
             return null;
         } finally {
-            // 注意：Clip 打开后会持有数据，这里不能提前关闭 ais；交给 Clip 管理
+            // Do not close ais here; the clip owns the stream
         }
     }
 
@@ -920,7 +920,7 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 将指定音量应用到 Clip（不改变 masterVolumeStatic），用于设置里预览 ding。
+     * Applies a one-off volume to a clip (does not touch masterVolumeStatic); used for ding preview.
      */
     private void applyVolumeToClip(Clip clip, float volume) {
         if (clip == null)
@@ -942,7 +942,7 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 将当前音量与静音设置应用到指定 Clip。仅用于本场景已有 Clip（无 isMusic 时按 SFX 处理）。
+     * Applies current mute/volume rules to an existing clip (defaults to SFX if isMusic is false).
      */
     private void applyVolumeToClip(Clip clip) {
         applyVolumeToClip(clip, false);
@@ -1022,14 +1022,14 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 将当前音量与静音设置应用到所有已存在的声音资源。
+     * Reapplies mute/volume to every clip owned by this scene.
      */
     private void updateAllVolumes() {
         applyVolumeToClip(jerryClip, false);  // sound effect
         applyVolumeToClip(bgmClip, true);     // music
     }
 
-    /** 静态：将指定音量应用到 Clip，供 playVolumeTestDingAt 使用 */
+    /** Static helper for {@link #playVolumeTestDingAt(float)} gain staging. */
     private static void applyVolumeToClipStatic(Clip clip, float volume) {
         if (clip == null) return;
         try {
@@ -1047,7 +1047,7 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 用指定音量播放一次 ding（不改变 masterVolume），供主菜单与游戏内设置预览用。
+     * Plays ding.wav once at the given volume without mutating masterVolume (settings preview).
      */
     public static void playVolumeTestDingAt(float volume) {
         try {
@@ -1265,12 +1265,10 @@ public class StartScene extends JPanel implements Scene {
     }
 
     /**
-     * 播放一次 ding.wav 作为音量测试（使用当前 masterVolume）。
+     * Volume test uses {@link #playVolumeTestDingAt(float)} with {@link #masterVolumeStatic}; no instance helper.
      */
-    // 注意：音量测试使用的是 static playVolumeTestDingAt(volume)。
-    // 该方法保留接口会造成“未使用”的诊断，因此移除本地实现。
 
-    /** 播放按钮点击音效（开始游戏等），先试 click.wav，无则用 ding.wav */
+    /** UI click SFX: try click.wav, else ding.wav */
     private void playClickSound() {
         Clip clip = loadSoundClip(CLICK_SOUND_NAME);
         if (clip == null)

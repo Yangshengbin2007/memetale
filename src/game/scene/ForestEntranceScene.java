@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 森林入口：王子与骑士达拉崩吧对话（左王子、右骑士），对话框在底部；
- * 说话者正常亮度，未说话者变暗；达拉崩吧的 surprise/resentment 表情水平镜像以贴右。
- * 入口对话结束后进入地图对话，再进入选点（仅可点击地标，有提示），点击后黑屏再进入大地图。
+ * Forest entrance: Prince (left) and Darabongba (right) with a bottom dialogue box.
+ * Active speaker is bright, the other is dimmed; mirror Darabongba for surprise/resentment.
+ * After the entrance script comes map dialogue, landmark picking (hinted), then a black screen into the overworld map.
  */
 public class ForestEntranceScene extends JPanel implements Scene {
     private static final int PHASE_ENTRANCE_DIALOGUE = 0;
@@ -50,9 +50,9 @@ public class ForestEntranceScene extends JPanel implements Scene {
 
     private static final float DIM_ALPHA = 0.45f;
     private static final int DIALOGUE_BOX_HEIGHT_RATIO = 22;
-    /** 立绘高度为屏高 2/3，膝盖与对话框顶对齐（约 60% 高度在框上方） */
+    /** Portrait height is 2/3 of the screen; knees line up with the dialogue top (~60% of sprite above the box). */
     private static final double CHARACTER_HEIGHT_RATIO = 2.0 / 3.0;
-    /** 立绘底部相对对话框顶的下移比例，0.6 表示膝盖约齐对话框顶 */
+    /** Fraction of portrait height below the dialogue top; 0.6 lines knees up with the box top. */
     private static final double CHARACTER_KNEE_ALIGN_RATIO = 0.6;
     private static final int TEXT_DURATION_MS = 1000;
     private static final int TEXT_ANIM_DELAY_MS = 40;
@@ -74,10 +74,10 @@ public class ForestEntranceScene extends JPanel implements Scene {
     private final Rectangle pauseHistoryBounds = new Rectangle();
     private final Rectangle pauseQuitBounds = new Rectangle();
     private final Runnable onQuitToTitle;
-    /** 读档后切换到第一章场景（由 Main 注入） */
+    /** After load, jump to chapter one (injected from Main). */
     private Runnable onLoadSwitchToChapterOne;
 
-    /** 森林对话历史（入口+地图），用于 ESC History */
+    /** Forest dialogue history (entrance + map) for the ESC History panel. */
     private final List<DialogueRecord> forestDialogueHistory = new ArrayList<>();
     private int lastForestLineRecorded = -1;
 
@@ -86,7 +86,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
     private int hoverLandmarkIndex = -1;
     private final Rectangle[] landmarkBounds = new Rectangle[ForestMapData.CHOICE_LANDMARK_IDS.length];
 
-    /** 点错地标时显示骑士单独台词，不弹窗；非 null 时在选点界面显示一句对话，点击后清除 */
+    /** Wrong landmark: show a knight-only line without a modal; click clears it. */
     private String wrongDestinationMessage = null;
     private Clip forestMusicClip;
     /** When choosing Troll Cave: quick fade instead of black screen; start time for fade overlay */
@@ -237,7 +237,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         repaint();
     }
 
-    /** 当前行打字机打满时记入 History（仅记一次）；advance 时也会调用以确保不遗漏 */
+    /** Append the current line to History once the typewriter finishes; advance() also records if needed. */
     private void recordCurrentLineToHistory() {
         String[][] lines = (phase == PHASE_ENTRANCE_DIALOGUE) ? ForestEntranceData.LINES : (phase == PHASE_MAP_DIALOGUE ? ForestMapData.LINES : null);
         int idx = phase == PHASE_ENTRANCE_DIALOGUE ? entranceLineIndex : (phase == PHASE_MAP_DIALOGUE ? mapLineIndex : -1);
@@ -843,7 +843,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         d.setVisible(true);
     }
 
-    /** 固定区域 maxW×maxH，完整身体脚底对齐框底（与对话框顶对齐） */
+    /** Draw inside maxW x maxH with feet at the bottom of the slot (aligned to the dialogue top). */
     private void drawCharacter(Graphics2D g2, Image img, int x, int y, int maxW, int maxH, boolean mirror) {
         int iw = img.getWidth(this);
         int ih = img.getHeight(this);
@@ -942,7 +942,7 @@ public class ForestEntranceScene extends JPanel implements Scene {
         requestFocusInWindow();
     }
 
-    /** 选点时点错地标：只画骑士立绘 + 底部对话框，点击任意处关闭 */
+    /** Wrong landmark on the map picker: knight sprite + bottom box; click anywhere to dismiss. */
     private void drawWrongDestinationDialogue(Graphics2D g2, int w, int h) {
         int boxH = h * DIALOGUE_BOX_HEIGHT_RATIO / 100;
         int boxY = h - boxH;

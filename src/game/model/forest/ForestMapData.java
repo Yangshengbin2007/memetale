@@ -1,14 +1,14 @@
 package game.model.forest;
 
 /**
- * 森林地图场景对话：Prince & Darabongba look at the map。
- * 每行 [speaker, text, princeExpression, darabongbaExpression]。
- * 对话结束后进入选点阶段（仅可点击地标，有提示）。
+ * Map dialogue: Prince and Darabongba read the map.
+ * Each row: [speaker, text, princeExpression, darabongbaExpression].
+ * After the script, the player picks a landmark (clickable regions only, with a hint).
  */
 public final class ForestMapData {
     private ForestMapData() {}
 
-    // 每行: speaker, text, princeExpr, darabongbaExpr
+    // Each row: speaker, text, princeExpr, darabongbaExpr
     public static final String[][] LINES = {
         {"", "Prince pulls out a map.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
         {"Prince", "Alright. According to the king... the dragon flew this way.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_DEFAULT},
@@ -126,10 +126,10 @@ public final class ForestMapData {
         {"Darabongba", "Good. We're finally thinking the same way.", ForestEntranceData.EXPR_DEFAULT, ForestEntranceData.EXPR_RESENTMENT},
     };
 
-    // 当前阶段第一站为 troll_cave；点其他地标会提示走错路（英文提示见 ForestEntranceScene）。
+    // First destination in this phase is troll_cave; wrong landmarks show a hint (see ForestEntranceScene).
     public static final String FIRST_DESTINATION_LANDMARK_ID = "troll_cave";
 
-    // 选点阶段可点击的地标 id，顺序须与 ForestOverworldMapScene 一致。
+    // Landmark ids for the pick phase; order must match ForestOverworldMapScene.
     public static final String[] CHOICE_LANDMARK_IDS = {
         "troll_cave", "waterfall", "radio_tower", "doge_shrine", "gigachad_arena"
     };
@@ -137,7 +137,7 @@ public final class ForestMapData {
         "Troll Cave", "Waterfall", "Radio Tower", "Doge Shrine", "Gigachad Arena"
     };
 
-    // 选点阶段各地标在 800x600 下的矩形 x,y,w,h；顺序同 CHOICE_LANDMARK_IDS。
+    // Hit rectangles in 800x600 space (x, y, w, h); same order as CHOICE_LANDMARK_IDS.
     public static final int[][] CHOICE_BOUNDS_800x600 = {
         {80, 120, 110, 70},
         {600, 320, 100, 80},
