@@ -166,8 +166,6 @@ run*.sh / run*.command / run*.bat — Launchers (CN + EN pairs)
 
 **Inspiration (parody / transformative):** Undertale, Chrome Dino, classic memory games, playground red-light–green-light, and meme culture (Doge, Cheems, troll face, Rickroll). **Assets:** AI-assisted or edited art; no direct redistribution of copyrighted tracks—references are satire / original implementation. **Tools:** Java, editors, debuggers.
 
-**Doge Shrine → epilogue:** Entering **Doge Shrine** on the forest map shows a short placeholder line, then an English epilogue (“After the dragon · reunion”). Background: add `goodending.cg` or `goodending.jpg` / `goodending.png` under **`image/Chapter Three/`** (falls back to `image/Chapter one/` if missing). BGM: `cg2.wav` for the scene; credits use `rickroll.wav`; the last gag lines play **without** music, then you return to the title.
-
 ---
 
 ## License / credits
