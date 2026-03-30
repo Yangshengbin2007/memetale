@@ -168,4 +168,4 @@ run*.sh / run*.command / run*.bat — Launchers (CN + EN pairs)
 
 ## License / credits
 
-Course / individual project for advanced programming; assets and story belong to the author. Update this section if you add a formal license.
+Course / individual project for advanced programming; story belong to the author. 
