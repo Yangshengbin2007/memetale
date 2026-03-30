@@ -31,6 +31,14 @@ This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves
 
 ---
 
+## Class Diagram
+
+<p align="center">
+  <img src="image/1213.png" alt="Class Diagram" width="85%" />
+</p>
+
+---
+
 ## Requirements
 
 | Item | Notes |
@@ -143,12 +151,48 @@ Planned / WIP: later chapters, more endings, extra branches and assets (see `sto
 
 ```
 src/game/          — Java sources (launcher, scenes, model, io)
+docs/              — Class diagram, mockups, logic flow diagram
 image/             — Backgrounds, CGs, UI art (chapter subfolders)
 music/             — BGM / SFX (wav/mp3 as loaded by code)
 saves/             — Created when you save in-game
 out/               — Build output (generated; safe to delete)
+dist/              — Packaged executable artifacts (jar)
 run*.sh / run*.command / run*.bat — Launchers (CN + EN pairs)
+build-release.*    — One-command jar packaging scripts
 ```
+
+---
+
+## Docs checklist (submission)
+
+- **Class diagram**: `docs/class-diagram.md`, `docs/UML-class-diagram.txt`
+- **Mockups**: `docs/mockups.md`
+- **Logic flow diagram (optional, provided)**: `docs/logic-flow-diagram.md`
+
+---
+
+## Downloadable executable
+
+This repo now includes a packaged jar flow:
+
+- Build script (macOS/Linux): `build-release.sh`
+- Build script (Windows): `build-release.bat`
+- Output jar: `dist/memetale-rpg.jar`
+
+Build commands:
+
+```bash
+chmod +x build-release.sh
+./build-release.sh
+```
+
+Run packaged executable:
+
+```bash
+java -jar dist/memetale-rpg.jar
+```
+
+Note: the jar expects project asset folders (`image/`, `music/`, `sound/`, `Stickers/`) to exist in the working directory.
 
 ---
 

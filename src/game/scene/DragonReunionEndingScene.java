@@ -33,7 +33,7 @@ public class DragonReunionEndingScene extends JPanel implements Scene {
 
     private static final int TEXT_DURATION_MS = 1000;
     private static final int TEXT_ANIM_DELAY_MS = 40;
-    private static final int SPACE_HOLD_MS = 2800;
+    private static final int SPACE_HOLD_MS = 350;
     private static final int FAST_FORWARD_INTERVAL_MS = 90;
 
     private final Runnable onCompleteToTitle;
@@ -130,9 +130,14 @@ public class DragonReunionEndingScene extends JPanel implements Scene {
     }
 
     private void loadBackground() {
-        String[] names = {"goodending.cg", "goodending.jpg", "goodending.png", "goodending.jpeg"};
+        // Support legacy names and current asset naming (goodendcg.*), plus case variants.
+        String[] names = {
+            "goodendcg.jpg", "goodendcg.png", "goodendcg.jpeg",
+            "goodending.cg", "goodending.jpg", "goodending.png", "goodending.jpeg"
+        };
         String[][] roots = {
             {"/image/Chapter Three/", "/image/Chapter%20Three/", "image/Chapter Three/"},
+            {"/image/chapter three/", "/image/chapter%20three/", "image/chapter three/"},
             {"/image/Chapter one/", "/image/chapter%20one/", "image/Chapter one/"},
         };
         for (String[] root : roots) {
@@ -424,6 +429,7 @@ public class DragonReunionEndingScene extends JPanel implements Scene {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                requestFocusInWindow();
                 Point p = e.getPoint();
                 if (pauseMenuVisible) {
                     if (pressedPauseSave && pauseSaveBounds.contains(p)) {
@@ -736,7 +742,7 @@ public class DragonReunionEndingScene extends JPanel implements Scene {
             g2.fillRect(0, 0, w, h);
             g2.setColor(new Color(180, 190, 220));
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
-            String hint = "Place goodending.jpg / goodending.png (or goodending.cg) in image/Chapter Three/";
+            String hint = "Place goodendcg.jpg (or goodending.jpg/png/cg) in image/Chapter Three/";
             FontMetrics fm = g2.getFontMetrics();
             g2.drawString(hint, (w - fm.stringWidth(hint)) / 2, h / 2);
         }

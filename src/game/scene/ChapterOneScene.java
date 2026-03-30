@@ -71,10 +71,10 @@ public class ChapterOneScene extends JPanel implements Scene {
     private static final int SCENE_FADE_MS = 400;
     private javax.swing.Timer sceneFadeTimer;
 
-    /** Space down acts like click; hold ~3s for fast-forward until release. */
+    /** Space down acts like click; hold briefly for fast-forward until release. */
     private boolean spaceKeyHeld = false;
     private boolean fastForwardActive = false;
-    private static final int SPACE_HOLD_MS = 3000;
+    private static final int SPACE_HOLD_MS = 350;
     private static final int FAST_FORWARD_INTERVAL_MS = 100;
     private javax.swing.Timer holdSpaceTimer;
     private javax.swing.Timer fastForwardTimer;
@@ -806,6 +806,7 @@ public class ChapterOneScene extends JPanel implements Scene {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                requestFocusInWindow();
                 if (pauseMenuVisible) {
                     Point p = e.getPoint();
                     if (pressedPauseSave && pauseSaveBounds.contains(p)) {

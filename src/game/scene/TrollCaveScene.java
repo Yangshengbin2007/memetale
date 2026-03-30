@@ -77,7 +77,7 @@ public class TrollCaveScene extends JPanel implements Scene {
     private static final double CHARACTER_KNEE_ALIGN_RATIO = 0.6;
     private static final int TEXT_DURATION_MS = 1000;
     private static final int TEXT_ANIM_DELAY_MS = 40;
-    private static final int SPACE_HOLD_MS = 3000;
+    private static final int SPACE_HOLD_MS = 350;
     private static final int FAST_FORWARD_INTERVAL_MS = 100;
     private static final int FIRST_TROLL_LINE = 32;
 
@@ -239,6 +239,7 @@ public class TrollCaveScene extends JPanel implements Scene {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                requestFocusInWindow();
                 Point p = e.getPoint();
                 if (pauseMenuVisible) {
                     if (pressedPauseSave && pauseSaveBounds.contains(p)) handleSave();
