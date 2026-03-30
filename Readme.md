@@ -24,9 +24,7 @@ This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves
   <img src="image/Chapter%20one/map1forest.jpg" alt="Overworld map" width="45%" />
 </p>
 
-<p align="center">
-  <img src="image/choose%20your%20way.jpg" alt="Choices" width="60%" />
-</p>
+
 
 
 ---
@@ -210,10 +208,8 @@ Note: the jar expects project asset folders (`image/`, `music/`, `sound/`, `Stic
 
 **Inspiration (parody / transformative):** Undertale, Chrome Dino, classic memory games, playground red-light–green-light, and meme culture (Doge, Cheems, troll face, Rickroll). **Assets:** AI-assisted or edited art; no direct redistribution of copyrighted tracks—references are satire / original implementation. **Tools:** Java, editors, debuggers.
 
-**Doge Shrine → epilogue:** Entering **Doge Shrine** on the forest map shows a short placeholder line, then an English epilogue (“After the dragon · reunion”). Background: add `goodending.cg` or `goodending.jpg` / `goodending.png` under **`image/Chapter Three/`** (falls back to `image/Chapter one/` if missing). BGM: `cg2.wav` for the scene; credits use `rickroll.wav`; the last gag lines play **without** music, then you return to the title.
-
 ---
 
 ## License / credits
 
-Course / individual project for advanced programming; assets and story belong to the author. Update this section if you add a formal license.
+Course / individual project for advanced programming; story belong to the author. 
