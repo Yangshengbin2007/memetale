@@ -163,9 +163,11 @@ build-release.*    — One-command jar packaging scripts
 
 ## Docs checklist (submission)
 
+- **Docs index (categorized)**: `docs/README.md`
 - **Class diagram**: `docs/class-diagram.md`, `docs/UML-class-diagram.txt`
 - **Mockups**: `docs/mockups.md`
 - **Logic flow diagram (optional, provided)**: `docs/logic-flow-diagram.md`
+- **Run/security guides (CN)**: `docs/guides/如何运行游戏.md`, `docs/guides/解决macOS安全警告.md`
 
 ---
 
