@@ -24,9 +24,7 @@ This is a **story-driven RPG / mystery adventure**: dialogue, exploration, saves
   <img src="image/Chapter%20one/map1forest.jpg" alt="Overworld map" width="45%" />
 </p>
 
-<p align="center">
-  <img src="image/choose%20your%20way.jpg" alt="Choices" width="60%" />
-</p>
+
 
 
 ---
